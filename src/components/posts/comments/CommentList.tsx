@@ -32,18 +32,78 @@ const CommentList: FC<CommentListProps> = ({ postId }) => {
     fetchComments();
   }, [postId]);
 
+  const handleReplyAdded = (parentId: string, reply: Comment) => {
+    setComments(prev => prev.map(comment => {
+      if (comment.id === parentId) {
+        return {
+          ...comment,
+          replies: [...(comment.replies || []), reply]
+        };
+      }
+      
+      if (comment.replies) {
+        const updateReplies = (replies: Comment[]): Comment[] => {
+          return replies.map(r => {
+            if (r.id === parentId) {
+              return {
+                ...r,
+                replies: [...(r.replies || []), reply]
+              };
+            }
+            if (r.replies) {
+              return { ...r, replies: updateReplies(r.replies) };
+            }
+            return r;
+          });
+        };
+        
+        return {
+          ...comment,
+          replies: updateReplies(comment.replies)
+        };
+      }
+      
+      return comment;
+    }));
+  };
+
   const handleCommentCreated = (newComment: Comment) => {
     setComments(prev => [newComment, ...prev]);
   };
 
   const handleCommentDeleted = (commentId: string) => {
-    setComments(prev => prev.filter(comment => comment.id !== commentId));
+    const deleteFromComments = (comments: Comment[]): Comment[] => {
+      return comments.filter(comment => {
+        if (comment.id === commentId) {
+          return false;
+        }
+        if (comment.replies) {
+          comment.replies = deleteFromComments(comment.replies);
+        }
+        return true;
+      });
+    };
+    
+    setComments(prev => deleteFromComments(prev));
   };
 
   const handleCommentUpdated = (updatedComment: Comment) => {
-    setComments(prev => prev.map(comment => 
-      comment.id === updatedComment.id ? updatedComment : comment
-    ));
+    const updateInComments = (comments: Comment[]): Comment[] => {
+      return comments.map(comment => {
+        if (comment.id === updatedComment.id) {
+          return updatedComment;
+        }
+        if (comment.replies) {
+          return {
+            ...comment,
+            replies: updateInComments(comment.replies)
+          };
+        }
+        return comment;
+      });
+    };
+    
+    setComments(prev => updateInComments(prev));
   };
 
   if (loading) {
@@ -95,8 +155,10 @@ const CommentList: FC<CommentListProps> = ({ postId }) => {
             <CommentItem
               key={comment.id}
               comment={comment}
+              postId={postId}
               onCommentDeleted={handleCommentDeleted}
               onCommentUpdated={handleCommentUpdated}
+              onReplyAdded={handleReplyAdded}
             />
           ))}
         </div>

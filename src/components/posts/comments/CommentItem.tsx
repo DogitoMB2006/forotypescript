@@ -5,17 +5,22 @@ import { deleteComment, updateComment } from '../../../services/commentService';
 import type { Comment } from '../../../services/commentService';
 import EditComment from './EditComment';
 import DeleteComment from './DeleteComment';
+import ReplyComment from './ReplyComment';
 
 interface CommentItemProps {
   comment: Comment;
+  postId: string;
   onCommentDeleted: (commentId: string) => void;
   onCommentUpdated: (comment: Comment) => void;
+  onReplyAdded: (parentId: string, reply: Comment) => void;
+  level?: number;
 }
 
-const CommentItem: FC<CommentItemProps> = ({ comment, onCommentDeleted, onCommentUpdated }) => {
+const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, onCommentUpdated, onReplyAdded, level = 0 }) => {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showReplyForm, setShowReplyForm] = useState(false);
   const isAuthor = user?.uid === comment.authorId;
 
   const formatTimeAgo = (timestamp: any) => {
@@ -57,6 +62,25 @@ const CommentItem: FC<CommentItemProps> = ({ comment, onCommentDeleted, onCommen
     }
   };
 
+  const handleReplyCreated = (reply: Comment) => {
+    onReplyAdded(comment.id, reply);
+    setShowReplyForm(false);
+  };
+
+  const processContent = (text: string) => {
+    const mentionRegex = /@(\w+)/g;
+    return text.split(mentionRegex).map((part, index) => {
+      if (index % 2 === 1) {
+        return (
+          <span key={index} className="text-blue-400 font-medium">
+            @{part}
+          </span>
+        );
+      }
+      return part;
+    });
+  };
+
   if (isEditing) {
     return (
       <EditComment
@@ -67,9 +91,11 @@ const CommentItem: FC<CommentItemProps> = ({ comment, onCommentDeleted, onCommen
     );
   }
 
+  const marginLeft = level > 0 ? `ml-${Math.min(level * 8, 32)}` : '';
+
   return (
     <>
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors duration-200">
+      <div className={`bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors duration-200 ${marginLeft}`}>
         <div className="flex items-start space-x-3">
           <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
             <span className="text-white text-sm font-medium">
@@ -113,17 +139,20 @@ const CommentItem: FC<CommentItemProps> = ({ comment, onCommentDeleted, onCommen
               )}
             </div>
             
-            <p className="text-gray-200 whitespace-pre-wrap">{comment.content}</p>
+            <p className="text-gray-200 whitespace-pre-wrap">{processContent(comment.content)}</p>
             
             <div className="flex items-center space-x-4 mt-3">
-              <button className="flex items-center space-x-1 text-gray-500 hover:text-red-400 transition-colors duration-200">
+              <button className="text-gray-500 hover:text-blue-400 transition-colors duration-200">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
                 <span className="text-sm">{comment.likes}</span>
               </button>
               
-              <button className="text-gray-500 hover:text-blue-400 transition-colors duration-200">
+              <button 
+                onClick={() => setShowReplyForm(!showReplyForm)}
+                className="text-gray-500 hover:text-blue-400 transition-colors duration-200"
+              >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                 </svg>
@@ -132,6 +161,31 @@ const CommentItem: FC<CommentItemProps> = ({ comment, onCommentDeleted, onCommen
           </div>
         </div>
       </div>
+
+      {showReplyForm && (
+        <ReplyComment
+          parentComment={comment}
+          postId={postId}
+          onReplyCreated={handleReplyCreated}
+          onCancel={() => setShowReplyForm(false)}
+        />
+      )}
+
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="mt-3 space-y-3">
+          {comment.replies.map(reply => (
+            <CommentItem
+              key={reply.id}
+              comment={reply}
+              postId={postId}
+              onCommentDeleted={onCommentDeleted}
+              onCommentUpdated={onCommentUpdated}
+              onReplyAdded={onReplyAdded}
+              level={level + 1}
+            />
+          ))}
+        </div>
+      )}
 
       <DeleteComment
         isOpen={showDeleteModal}

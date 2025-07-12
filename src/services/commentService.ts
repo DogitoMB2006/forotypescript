@@ -7,6 +7,8 @@ export interface CreateCommentData {
   authorId: string;
   authorUsername: string;
   authorDisplayName: string;
+  parentId?: string;
+  replyToUsername?: string;
 }
 
 export interface Comment {
@@ -20,6 +22,9 @@ export interface Comment {
   updatedAt: any;
   likes: number;
   likedBy: string[];
+  parentId?: string;
+  replyToUsername?: string;
+  replies?: Comment[];
 }
 
 export const createComment = async (commentData: CreateCommentData) => {
@@ -30,6 +35,8 @@ export const createComment = async (commentData: CreateCommentData) => {
       authorId: commentData.authorId,
       authorUsername: commentData.authorUsername,
       authorDisplayName: commentData.authorDisplayName,
+      parentId: commentData.parentId || null,
+      replyToUsername: commentData.replyToUsername || null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       likes: 0,
@@ -52,10 +59,43 @@ export const getCommentsByPostId = async (postId: string): Promise<Comment[]> =>
     );
     const querySnapshot = await getDocs(q);
     
-    return querySnapshot.docs.map(doc => ({
+    const allComments = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     } as Comment));
+
+    const commentsMap = new Map<string, Comment>();
+    const topLevelComments: Comment[] = [];
+
+    allComments.forEach(comment => {
+      comment.replies = [];
+      commentsMap.set(comment.id, comment);
+      
+      if (!comment.parentId) {
+        topLevelComments.push(comment);
+      }
+    });
+
+    allComments.forEach(comment => {
+      if (comment.parentId) {
+        const parent = commentsMap.get(comment.parentId);
+        if (parent) {
+          parent.replies!.push(comment);
+        }
+      }
+    });
+
+    topLevelComments.forEach(comment => {
+      if (comment.replies) {
+        comment.replies.sort((a, b) => {
+          const aTime = a.createdAt?.toDate?.() || new Date(a.createdAt);
+          const bTime = b.createdAt?.toDate?.() || new Date(b.createdAt);
+          return aTime.getTime() - bTime.getTime();
+        });
+      }
+    });
+
+    return topLevelComments;
   } catch (error) {
     console.error('Error getting comments:', error);
     throw error;
