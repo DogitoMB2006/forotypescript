@@ -1,18 +1,32 @@
-import { FC } from 'react';
+import { FC, useState } from 'react';
+import CreatePost from '../../components/posts/CreatePost';
+import FloatingCreateButton from '../../components/ui/FloatingCreateButton';
+import PostsList from '../../components/posts/PostsList';
 
 const Home: FC = () => {
+  const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-gray-950">
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold text-white mb-8">Foro Avanzado</h1>
-        <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-semibold text-gray-200 mb-4">Bienvenido al Foro</h2>
-          <p className="text-gray-400">
-            Este es el inicio de nuestro foro avanzado. Aquí podrás encontrar todas las discusiones
-            y participar en la comunidad.
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-white mb-4">Foro Avanzado</h1>
+          <p className="text-gray-400 text-lg">
+            Comparte tus ideas y conecta con la comunidad
           </p>
         </div>
+
+        <div className="mb-8">
+          <PostsList />
+        </div>
       </div>
+
+      <FloatingCreateButton onClick={() => setIsCreatePostOpen(true)} />
+      
+      <CreatePost 
+        isOpen={isCreatePostOpen} 
+        onClose={() => setIsCreatePostOpen(false)} 
+      />
     </div>
   );
 };
