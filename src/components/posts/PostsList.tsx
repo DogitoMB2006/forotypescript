@@ -1,4 +1,5 @@
-import { FC, useState, useEffect } from 'react';
+import type { FC } from 'react';
+import { useState, useEffect } from 'react';
 import { getPosts } from '../../services/postService';
 import type { Post } from '../../services/postService';
 import PostCard from './PostCard';

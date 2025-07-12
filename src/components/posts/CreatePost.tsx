@@ -1,4 +1,5 @@
-import { FC, useState, useRef } from 'react';
+import type { FC } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { createPost } from '../../services/postService';

@@ -1,4 +1,5 @@
-import { FC, useState, useEffect } from 'react';
+import type { FC } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPostById, deletePost } from '../services/postService';
 import { useAuth } from '../hooks/useAuth';

@@ -1,6 +1,6 @@
 import { FC, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth';
 
 const Navbar: FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -21,7 +21,7 @@ const Navbar: FC = () => {
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">F</span>
               </div>
-              <span className="text-white text-xl font-semibold">DF</span>
+              <span className="text-white text-xl font-semibold">ForoTS</span>
             </Link>
           </div>
 
