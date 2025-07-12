@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { User, onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 
@@ -7,6 +8,7 @@ interface UserProfile {
   uid: string;
   email: string;
   username: string;
+  displayName: string;
   createdAt: Date;
 }
 
