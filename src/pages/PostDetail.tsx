@@ -2,15 +2,18 @@ import type { FC } from 'react';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPostById, deletePost } from '../services/postService';
+import { getCommentCount } from '../services/commentService';
 import { useAuth } from '../hooks/useAuth';
 import type { Post } from '../services/postService';
 import DeletePost from '../components/posts/DeletePost';
+import CommentList from '../components/posts/comments/CommentList';
 
 const PostDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [post, setPost] = useState<Post | null>(null);
+  const [commentCount, setCommentCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -25,6 +28,8 @@ const PostDetail: FC = () => {
         const fetchedPost = await getPostById(id);
         if (fetchedPost) {
           setPost(fetchedPost);
+          const count = await getCommentCount(id);
+          setCommentCount(count);
         } else {
           setError('Post no encontrado');
         }
@@ -212,7 +217,7 @@ const PostDetail: FC = () => {
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
-                  <span>{post.commentsCount} Comentarios</span>
+                  <span>{commentCount} Comentarios</span>
                 </button>
                 
                 <button className="flex items-center space-x-2 hover:text-green-400 transition-colors duration-200">
@@ -226,8 +231,8 @@ const PostDetail: FC = () => {
           </div>
 
           <div className="mt-8 bg-gray-900 border border-gray-800 rounded-lg p-6">
-            <h3 className="text-xl font-bold text-white mb-4">Comentarios</h3>
-            <p className="text-gray-400">Los comentarios estarán disponibles próximamente...</p>
+            <h3 className="text-xl font-bold text-white mb-6">Comentarios</h3>
+            <CommentList postId={post.id} />
           </div>
         </div>
       </div>

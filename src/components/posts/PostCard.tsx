@@ -1,8 +1,9 @@
 import type { FC } from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { deletePost } from '../../services/postService';
+import { getCommentCount } from '../../services/commentService';
 import type { Post } from '../../services/postService';
 import DeletePost from './DeletePost';
 
@@ -14,7 +15,21 @@ interface PostCardProps {
 const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
   const { user } = useAuth();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
   const isAuthor = user?.uid === post.authorId;
+
+  useEffect(() => {
+    const fetchCommentCount = async () => {
+      try {
+        const count = await getCommentCount(post.id);
+        setCommentCount(count);
+      } catch (error) {
+        console.error('Error fetching comment count:', error);
+      }
+    };
+
+    fetchCommentCount();
+  }, [post.id]);
 
   const formatTimeAgo = (timestamp: any) => {
     if (!timestamp) return 'Hace un momento';
@@ -154,7 +169,7 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
-                  <span>{post.commentsCount}</span>
+                  <span>{commentCount}</span>
                 </button>
                 
                 <button 

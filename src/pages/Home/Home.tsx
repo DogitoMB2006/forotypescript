@@ -16,7 +16,7 @@ const Home: FC = () => {
     <div className="min-h-screen bg-gray-950">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-4">Foro Avanzado</h1>
+          <h1 className="text-4xl font-bold text-white mb-4">Dogito's Forum</h1>
           <p className="text-gray-400 text-lg">
             Comparte tus ideas y conecta con la comunidad
           </p>
