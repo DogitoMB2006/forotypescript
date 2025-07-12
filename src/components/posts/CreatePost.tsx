@@ -6,9 +6,10 @@ import { createPost } from '../../services/postService';
 interface CreatePostProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-const CreatePost: FC<CreatePostProps> = ({ isOpen, onClose }) => {
+const CreatePost: FC<CreatePostProps> = ({ isOpen, onClose, onSuccess }) => {
   const { user, userProfile } = useAuth();
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
@@ -85,8 +86,13 @@ const CreatePost: FC<CreatePostProps> = ({ isOpen, onClose }) => {
       setContent('');
       setImages([]);
       setImagePreviews([]);
-      onClose();
-      navigate('/');
+      
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        onClose();
+        navigate('/');
+      }
     } catch (error) {
       console.error('Error creating post:', error);
       setError('Error al crear el post. Intenta de nuevo.');

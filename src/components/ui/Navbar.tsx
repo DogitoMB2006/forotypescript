@@ -21,7 +21,7 @@ const Navbar: FC = () => {
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-lg">F</span>
               </div>
-              <span className="text-white text-xl font-semibold">ForoTS</span>
+              <span className="text-white text-xl font-semibold">DF</span>
             </Link>
           </div>
 

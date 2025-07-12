@@ -1,5 +1,5 @@
-import { collection, addDoc, serverTimestamp, query, orderBy, getDocs, doc, getDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc, serverTimestamp, query, orderBy, getDocs, doc, getDoc, deleteDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from '../firebase/config';
 
 export interface CreatePostData {
@@ -93,6 +93,28 @@ export const getPostById = async (postId: string): Promise<Post | null> => {
     return null;
   } catch (error) {
     console.error('Error getting post:', error);
+    throw error;
+  }
+};
+
+export const deletePost = async (postId: string, imageUrls: string[] = []) => {
+  try {
+    if (imageUrls.length > 0) {
+      const deletePromises = imageUrls.map(async (imageUrl) => {
+        try {
+          const imageRef = ref(storage, imageUrl);
+          await deleteObject(imageRef);
+        } catch (error) {
+          console.error('Error deleting image:', error);
+        }
+      });
+      
+      await Promise.all(deletePromises);
+    }
+
+    await deleteDoc(doc(db, 'posts', postId));
+  } catch (error) {
+    console.error('Error deleting post:', error);
     throw error;
   }
 };
