@@ -38,13 +38,13 @@ const Navbar: FC = () => {
                 to="/categorias" 
                 className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
               >
-                Categorías
+                Categorías | No funciona proximamente
               </Link>
               <Link 
                 to="/trending" 
                 className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
               >
-                Trending
+                Fijados
               </Link>
               {isAuthenticated && (
                 <Link 
