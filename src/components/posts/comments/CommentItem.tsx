@@ -136,7 +136,6 @@ const CommentItem: FC<CommentItemProps> = ({ comment, onCommentDeleted, onCommen
       <DeleteComment
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
-        commentId={comment.id}
         onDelete={handleDelete}
       />
     </>

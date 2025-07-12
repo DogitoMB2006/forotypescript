@@ -1,4 +1,4 @@
-import { collection, addDoc, serverTimestamp, query, orderBy, getDocs, doc, getDoc, deleteDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, getDocs, doc, deleteDoc, updateDoc, where } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 export interface CreateCommentData {

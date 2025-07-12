@@ -2,13 +2,12 @@ import type { FC } from 'react';
 import { useState } from 'react';
 
 interface DeleteCommentProps {
-  commentId: string;
   onDelete: () => Promise<void>;
   isOpen: boolean;
   onClose: () => void;
 }
 
-const DeleteComment: FC<DeleteCommentProps> = ({ commentId, onDelete, isOpen, onClose }) => {
+const DeleteComment: FC<DeleteCommentProps> = ({ onDelete, isOpen, onClose }) => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
