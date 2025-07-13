@@ -13,7 +13,7 @@ interface ProfileHeaderProps {
 }
 
 const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }) => {
-  const { user, canModerate } = useAuth();
+  const { canModerate } = useAuth();
   const [showModerationPanel, setShowModerationPanel] = useState(false);
   
   const canShowModerationPanel = canModerate && !isOwnProfile;

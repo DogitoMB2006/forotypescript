@@ -93,17 +93,6 @@ export const useAuth = (): AuthData => {
 
   const isAdmin = user ? isUserAdmin(user.email || '') : false;
 
-  const canModerate = user ? 
-    (async () => {
-      try {
-        return await canUserModerate(user.uid, user.email || '');
-      } catch (error) {
-        console.error('Error checking moderation permissions:', error);
-        return false;
-      }
-    })() : 
-    Promise.resolve(false);
-
   const hasPermission = (action: string, resource: string): boolean => {
     if (!userRole) return false;
     if (isAdmin) return true;

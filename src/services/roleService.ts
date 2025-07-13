@@ -1,11 +1,11 @@
-import { collection, addDoc, query, where, getDocs, doc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { assignBadgeToUser, removeBadgeFromUser } from './badgeService';
-import type { Role, UserRole, UserRoleWithDetails, ROLES } from '../types/roles';
+import type { Role, UserRole, UserRoleWithDetails } from '../types/roles';
 import { ROLES as AVAILABLE_ROLES } from '../types/roles';
 
 const roleCache = new Map<string, { role: Role | null; timestamp: number }>();
-const CACHE_DURATION = 30000; // 30 segundos
+const CACHE_DURATION = 30000;
 
 const invalidateUserRoleCache = (userId: string) => {
   roleCache.delete(userId);

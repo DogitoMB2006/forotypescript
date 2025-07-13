@@ -2,7 +2,7 @@ import type { FC } from 'react';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { getAvailableBadges, assignBadgeToUser, getUserBadges, removeBadgeFromUser, setDefaultBadge } from '../../services/badgeService';
-import { getAvailableRoles, assignRoleToUser, removeRoleFromUser, getUserRoles, isUserAdmin } from '../../services/roleService';
+import { getAvailableRoles, assignRoleToUser, removeRoleFromUser, getUserRoles } from '../../services/roleService';
 import type { Badge as BadgeType, UserBadgeWithDetails } from '../../types/badge';
 import type { Role, UserRoleWithDetails } from '../../types/roles';
 import Badge from '../user/Badge';
