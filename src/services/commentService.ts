@@ -44,42 +44,42 @@ export const createComment = async (commentData: CreateCommentData) => {
       likedBy: []
     });
 
-    const postDoc = await getDoc(doc(db, 'posts', commentData.postId));
-    if (postDoc.exists()) {
-      const postData = postDoc.data();
-      const postAuthorId = postData.authorId;
+    const userDoc = await getDoc(doc(db, 'users', commentData.authorId));
+    const userData = userDoc.exists() ? userDoc.data() : null;
 
-      if (postAuthorId !== commentData.authorId) {
-        const userDoc = await getDoc(doc(db, 'users', commentData.authorId));
-        const userData = userDoc.exists() ? userDoc.data() : null;
+    if (commentData.parentId) {
+      const parentCommentDoc = await getDoc(doc(db, 'comments', commentData.parentId));
+      if (parentCommentDoc.exists()) {
+        const parentCommentData = parentCommentDoc.data();
+        const parentAuthorId = parentCommentData.authorId;
 
-        if (commentData.parentId) {
-          const parentCommentDoc = await getDoc(doc(db, 'comments', commentData.parentId));
-          if (parentCommentDoc.exists()) {
-            const parentCommentData = parentCommentDoc.data();
-            const parentAuthorId = parentCommentData.authorId;
+        if (parentAuthorId !== commentData.authorId) {
+          const notificationData: any = {
+            type: 'reply',
+            userId: parentAuthorId,
+            triggeredBy: commentData.authorId,
+            triggeredByUsername: commentData.authorUsername,
+            triggeredByDisplayName: commentData.authorDisplayName,
+            postId: commentData.postId,
+            commentId: docRef.id,
+            parentCommentId: commentData.parentId,
+            content: commentData.content
+          };
 
-            if (parentAuthorId !== commentData.authorId) {
-              const notificationData: any = {
-                type: 'reply',
-                userId: parentAuthorId,
-                triggeredBy: commentData.authorId,
-                triggeredByUsername: commentData.authorUsername,
-                triggeredByDisplayName: commentData.authorDisplayName,
-                postId: commentData.postId,
-                commentId: docRef.id,
-                parentCommentId: commentData.parentId,
-                content: commentData.content
-              };
-
-              if (userData?.profileImageUrl) {
-                notificationData.triggeredByProfileImage = userData.profileImageUrl;
-              }
-
-              await createNotification(notificationData);
-            }
+          if (userData?.profileImageUrl) {
+            notificationData.triggeredByProfileImage = userData.profileImageUrl;
           }
-        } else {
+
+          await createNotification(notificationData);
+        }
+      }
+    } else {
+      const postDoc = await getDoc(doc(db, 'posts', commentData.postId));
+      if (postDoc.exists()) {
+        const postData = postDoc.data();
+        const postAuthorId = postData.authorId;
+
+        if (postAuthorId !== commentData.authorId) {
           const notificationData: any = {
             type: 'comment',
             userId: postAuthorId,
