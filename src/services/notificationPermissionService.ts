@@ -14,6 +14,15 @@ export interface PushNotificationData {
   }>;
 }
 
+// Extendemos NotificationOptions para incluir actions cuando esté disponible
+interface ExtendedNotificationOptions extends NotificationOptions {
+  actions?: Array<{
+    action: string;
+    title: string;
+    icon?: string;
+  }>;
+}
+
 class NotificationPermissionService {
   private static instance: NotificationPermissionService;
 
@@ -55,22 +64,51 @@ class NotificationPermissionService {
       return;
     }
 
-    const options: NotificationOptions = {
-      body: data.body,
-      icon: data.icon || '/favicon.ico',
-      badge: data.badge || '/favicon.ico',
-      tag: data.tag,
-      data: data.data,
-      actions: data.actions,
-      requireInteraction: true,
-      silent: false,
-    };
+    try {
+      if ('serviceWorker' in navigator) {
+        // Usar Service Worker para notificaciones con acciones
+        const registration = await navigator.serviceWorker.ready;
+        const options: ExtendedNotificationOptions = {
+          body: data.body,
+          icon: data.icon || '/favicon.ico',
+          badge: data.badge || '/favicon.ico',
+          tag: data.tag,
+          data: data.data,
+          requireInteraction: true,
+          silent: false,
+        };
 
-    if ('serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.ready;
-      await registration.showNotification(data.title, options);
-    } else {
-      new Notification(data.title, options);
+        // Solo agregar actions si están disponibles
+        if (data.actions && data.actions.length > 0) {
+          options.actions = data.actions;
+        }
+
+        await registration.showNotification(data.title, options);
+      } else {
+        // Fallback para navegadores que no soportan Service Worker
+        const options: NotificationOptions = {
+          body: data.body,
+          icon: data.icon || '/favicon.ico',
+          tag: data.tag,
+          data: data.data,
+          requireInteraction: true,
+          silent: false,
+        };
+
+        new Notification(data.title, options);
+      }
+    } catch (error) {
+      console.error('Error showing notification:', error);
+      
+      // Fallback adicional: notificación básica
+      try {
+        new Notification(data.title, {
+          body: data.body,
+          icon: data.icon || '/favicon.ico',
+        });
+      } catch (fallbackError) {
+        console.error('Error showing fallback notification:', fallbackError);
+      }
     }
   }
 
