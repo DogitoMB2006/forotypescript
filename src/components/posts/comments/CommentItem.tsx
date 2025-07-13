@@ -123,7 +123,10 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
 
   return (
     <>
-      <div className={`bg-gray-800 border border-gray-700 rounded-lg p-3 sm:p-4 hover:border-gray-600 transition-colors duration-200 ${marginLeft}`}>
+      <div 
+        id={`comment-${comment.id}`}
+        className={`bg-gray-800 border border-gray-700 rounded-lg p-3 sm:p-4 hover:border-gray-600 transition-colors duration-200 ${marginLeft} scroll-mt-24`}
+      >
         <div className="flex items-start space-x-2 sm:space-x-3">
           <Avatar 
             src={authorProfile?.profileImageUrl}

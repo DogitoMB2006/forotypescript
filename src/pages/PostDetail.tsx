@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getPostById, deletePost } from '../services/postService';
 import { getCommentCount } from '../services/commentService';
 import { getUserProfile } from '../services/userService';
@@ -16,6 +16,7 @@ import DefaultBadge from '../components/user/DefaultBadge';
 const PostDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const [post, setPost] = useState<Post | null>(null);
   const [commentCount, setCommentCount] = useState(0);
@@ -60,6 +61,21 @@ const PostDetail: FC = () => {
       setInitialLoad(false);
     }
   }, [id, refreshProfile, initialLoad]);
+
+  useEffect(() => {
+    if (location.hash && !loading && post) {
+      setTimeout(() => {
+        const element = document.getElementById(location.hash.substring(1));
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-50');
+          setTimeout(() => {
+            element.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-50');
+          }, 2000);
+        }
+      }, 500);
+    }
+  }, [location.hash, loading, post]);
 
   useEffect(() => {
     const interval = setInterval(() => {
