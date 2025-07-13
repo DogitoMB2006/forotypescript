@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { deleteComment, updateComment } from '../../../services/commentService';
 import { getUserProfile } from '../../../services/userService';
+import { userHasPermission } from '../../../services/roleService';
 import type { Comment } from '../../../services/commentService';
 import type { UserProfile } from '../../../services/userService';
 import EditComment from './EditComment';
@@ -11,6 +12,7 @@ import ReplyComment from './ReplyComment';
 import Avatar from '../../ui/Avatar';
 import ClickableUsername from '../../ui/ClickableUsername';
 import DefaultBadge from '../../user/DefaultBadge';
+import UserRoleDisplay from '../../user/UserRoleDisplay';
 
 interface CommentItemProps {
   comment: Comment;
@@ -22,14 +24,18 @@ interface CommentItemProps {
 }
 
 const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, onCommentUpdated, onReplyAdded, level = 0 }) => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [authorProfile, setAuthorProfile] = useState<UserProfile | null>(null);
   const [refreshProfile, setRefreshProfile] = useState(0);
   const [showFullContent, setShowFullContent] = useState(false);
+  const [permissionError, setPermissionError] = useState('');
+  
   const isAuthor = user?.uid === comment.authorId;
+  const canDeleteComment = isAuthor || hasPermission('delete', 'comments');
+  const canEditComment = isAuthor;
 
   useEffect(() => {
     const fetchAuthorProfile = async () => {
@@ -82,6 +88,16 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
   };
 
   const handleDelete = async () => {
+    if (!user) return;
+
+    if (!isAuthor) {
+      const hasDeletePermission = await userHasPermission(user.uid, 'delete', 'comments');
+      if (!hasDeletePermission) {
+        setPermissionError('No tienes permisos suficientes para realizar esta acción. Por favor, refresca la página.');
+        return;
+      }
+    }
+
     try {
       await deleteComment(comment.id);
       onCommentDeleted(comment.id);
@@ -89,6 +105,20 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
       console.error('Error deleting comment:', error);
       throw error;
     }
+  };
+
+  const handleDeleteClick = async () => {
+    if (!user) return;
+
+    if (!isAuthor) {
+      const hasDeletePermission = await userHasPermission(user.uid, 'delete', 'comments');
+      if (!hasDeletePermission) {
+        setPermissionError('No tienes permisos suficientes para realizar esta acción. Por favor, refresca la página.');
+        return;
+      }
+    }
+
+    setShowDeleteModal(true);
   };
 
   const handleReplyCreated = (reply: Comment) => {
@@ -135,11 +165,25 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
     return 'ml-8 sm:ml-16 md:ml-20';
   };
 
+  const getDeleteButtonStyle = () => {
+    if (isAuthor) {
+      return "text-gray-500 hover:text-red-400 hover:bg-red-900/20";
+    }
+    return "text-red-500 hover:text-red-400 hover:bg-red-900/20";
+  };
+
+  const getDeleteButtonTitle = () => {
+    if (isAuthor) {
+      return "Eliminar comentario";
+    }
+    return "Eliminar comentario (Moderación)";
+  };
+
   return (
     <>
       <div 
         id={`comment-${comment.id}`}
-        className={`bg-gray-800 border border-gray-700 rounded-lg p-3 sm:p-4 hover:border-gray-600 transition-colors duration-200 ${getMarginClass()} scroll-mt-24`}
+        className={`bg-gray-800 border border-gray-700 rounded-lg p-3 sm:p-4 hover:border-gray-600 transition-colors duration-200 ${getMarginClass()} scroll-mt-24 group`}
       >
         <div className="flex items-start space-x-2 sm:space-x-3">
           <Avatar 
@@ -166,8 +210,9 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
                       {truncateName(comment.authorDisplayName, 20)}
                     </span>
                   </ClickableUsername>
-                  <div className="flex-shrink-0">
+                  <div className="flex items-center space-x-1 flex-shrink-0">
                     <DefaultBadge badgeId={(authorProfile as any)?.defaultBadgeId} size="sm" />
+                    <UserRoleDisplay userId={comment.authorId} size="sm" />
                   </div>
                 </div>
                 
@@ -186,28 +231,37 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
                 </div>
               </div>
               
-              {isAuthor && (
-                <div className="flex items-center space-x-1 flex-shrink-0">
+              <div className="flex items-center space-x-1 flex-shrink-0">
+                {canDeleteComment && !isAuthor && (
+                  <div className="px-1.5 py-0.5 bg-red-900/30 border border-red-500/50 rounded text-red-400 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    Mod
+                  </div>
+                )}
+                
+                {canEditComment && (
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="text-gray-500 hover:text-blue-400 p-1.5 rounded transition-colors duration-200 hover:bg-blue-900/20"
+                    className="text-gray-500 hover:text-blue-400 p-1.5 rounded transition-colors duration-200 hover:bg-blue-900/20 opacity-0 group-hover:opacity-100"
                     title="Editar comentario"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                   </button>
+                )}
+                
+                {canDeleteComment && (
                   <button
-                    onClick={() => setShowDeleteModal(true)}
-                    className="text-gray-500 hover:text-red-400 p-1.5 rounded transition-colors duration-200 hover:bg-red-900/20"
-                    title="Eliminar comentario"
+                    onClick={handleDeleteClick}
+                    className={`p-1.5 rounded transition-colors duration-200 opacity-0 group-hover:opacity-100 ${getDeleteButtonStyle()}`}
+                    title={getDeleteButtonTitle()}
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
             
             <div className="text-gray-200 text-sm sm:text-base leading-relaxed mb-3">
@@ -291,10 +345,43 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
         </div>
       )}
 
+      {permissionError && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-red-500 rounded-xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Permisos Insuficientes</h3>
+                <p className="text-sm text-red-300">{permissionError}</p>
+              </div>
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setPermissionError('')}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg font-medium transition-colors duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition-colors duration-200"
+              >
+                Refrescar Página
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <DeleteComment
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onDelete={handleDelete}
+        isModerationAction={!isAuthor}
       />
     </>
   );

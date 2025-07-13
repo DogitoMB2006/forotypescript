@@ -18,6 +18,14 @@ const AVAILABLE_BADGES: Badge[] = [
     iconUrl: 'https://cdn3.emoji.gg/emojis/7871-discord-staff.png',
     rarity: 'epic',
     category: 'staff'
+  },
+  {
+    id: 'moderator',
+    name: 'Moderador',
+    description: 'Moderador del foro',
+    iconUrl: 'https://cdn3.emoji.gg/emojis/1503-moderator-badge.png',
+    rarity: 'epic',
+    category: 'staff'
   }
 ];
 

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import type { UserProfile } from '../../services/userService';
 import BadgeList from '../user/BadgeList';
+import UserRoleDisplay from '../user/UserRoleDisplay';
 import ModerationPanel from '../moderation/ModerationPanel';
 
 interface ProfileHeaderProps {
@@ -12,11 +13,10 @@ interface ProfileHeaderProps {
 }
 
 const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }) => {
-  const { user } = useAuth();
+  const { user, canModerate } = useAuth();
   const [showModerationPanel, setShowModerationPanel] = useState(false);
   
-  const isModerator = user?.email === 'dogitomb2022@gmail.com';
-  const canModerate = isModerator && !isOwnProfile;
+  const canShowModerationPanel = canModerate && !isOwnProfile;
 
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('es-ES', {
@@ -62,7 +62,10 @@ const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }
         <div className="px-6 pt-16 pb-6">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-bold text-white mb-1">{profile.displayName}</h1>
+              <div className="flex items-center space-x-3 mb-2">
+                <h1 className="text-2xl font-bold text-white">{profile.displayName}</h1>
+                <UserRoleDisplay userId={profile.uid} size="md" />
+              </div>
               <p className="text-gray-400 mb-2">@{profile.username}</p>
               <p className="text-gray-500 text-sm mb-4">
                 Se unió en {formatDate(profile.createdAt)}
@@ -85,7 +88,7 @@ const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }
                 </button>
               )}
               
-              {canModerate && (
+              {canShowModerationPanel && (
                 <button
                   onClick={() => setShowModerationPanel(true)}
                   className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"

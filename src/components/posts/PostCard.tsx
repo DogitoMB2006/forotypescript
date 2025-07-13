@@ -5,6 +5,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { deletePost } from '../../services/postService';
 import { getCommentCount } from '../../services/commentService';
 import { getUserProfile } from '../../services/userService';
+import { userHasPermission } from '../../services/roleService';
 import type { Post } from '../../services/postService';
 import type { UserProfile } from '../../services/userService';
 import DeletePost from './DeletePost';
@@ -12,6 +13,7 @@ import LikeButton from './LikeButton';
 import Avatar from '../ui/Avatar';
 import ClickableUsername from '../ui/ClickableUsername';
 import DefaultBadge from '../user/DefaultBadge';
+import UserRoleDisplay from '../user/UserRoleDisplay';
 
 interface PostCardProps {
   post: Post;
@@ -19,12 +21,15 @@ interface PostCardProps {
 }
 
 const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
   const [authorProfile, setAuthorProfile] = useState<UserProfile | null>(null);
   const [refreshProfile, setRefreshProfile] = useState(0);
+  const [permissionError, setPermissionError] = useState('');
+  
   const isAuthor = user?.uid === post.authorId;
+  const canDeletePost = isAuthor || hasPermission('delete', 'posts');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -86,6 +91,16 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
   };
 
   const handleDelete = async (postId: string) => {
+    if (!user) return;
+
+    if (!isAuthor) {
+      const hasDeletePermission = await userHasPermission(user.uid, 'delete', 'posts');
+      if (!hasDeletePermission) {
+        setPermissionError('No tienes permisos suficientes para realizar esta acción. Por favor, refresca la página.');
+        return;
+      }
+    }
+
     try {
       await deletePost(postId, post.imageUrls);
       onPostDeleted?.(postId);
@@ -93,6 +108,37 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
       console.error('Error deleting post:', error);
       throw error;
     }
+  };
+
+  const handleDeleteClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!user) return;
+
+    if (!isAuthor) {
+      const hasDeletePermission = await userHasPermission(user.uid, 'delete', 'posts');
+      if (!hasDeletePermission) {
+        setPermissionError('No tienes permisos suficientes para realizar esta acción. Por favor, refresca la página.');
+        return;
+      }
+    }
+
+    setShowDeleteModal(true);
+  };
+
+  const getDeleteButtonStyle = () => {
+    if (isAuthor) {
+      return "text-gray-500 hover:text-red-400 hover:bg-red-900/20";
+    }
+    return "text-red-500 hover:text-red-400 hover:bg-red-900/20";
+  };
+
+  const getDeleteButtonTitle = () => {
+    if (isAuthor) {
+      return "Eliminar post";
+    }
+    return "Eliminar post (Moderación)";
   };
 
   return (
@@ -119,8 +165,9 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
                     >
                       {post.authorDisplayName}
                     </ClickableUsername>
-                    <div className="flex-shrink-0">
+                    <div className="flex items-center space-x-1 flex-shrink-0">
                       <DefaultBadge badgeId={(authorProfile as any)?.defaultBadgeId} size="sm" />
+                      <UserRoleDisplay userId={post.authorId} size="sm" />
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 text-gray-500 text-sm flex-wrap">
@@ -130,20 +177,23 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
                   </div>
                 </div>
                 
-                {isAuthor && (
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setShowDeleteModal(true);
-                    }}
-                    className="text-gray-500 hover:text-red-400 p-1 sm:p-2 rounded-lg transition-colors duration-200 hover:bg-red-900/20 opacity-0 group-hover:opacity-100 flex-shrink-0"
-                    title="Eliminar post"
-                  >
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+                {canDeletePost && (
+                  <div className="flex items-center space-x-2">
+                    {!isAuthor && (
+                      <div className="px-2 py-1 bg-red-900/30 border border-red-500/50 rounded text-red-400 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        Mod
+                      </div>
+                    )}
+                    <button
+                      onClick={handleDeleteClick}
+                      className={`p-1 sm:p-2 rounded-lg transition-colors duration-200 opacity-0 group-hover:opacity-100 flex-shrink-0 ${getDeleteButtonStyle()}`}
+                      title={getDeleteButtonTitle()}
+                    >
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 )}
               </div>
               
@@ -220,12 +270,45 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
         </div>
       </Link>
 
+      {permissionError && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900 border border-red-500 rounded-xl shadow-2xl w-full max-w-md p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Permisos Insuficientes</h3>
+                <p className="text-sm text-red-300">{permissionError}</p>
+              </div>
+            </div>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setPermissionError('')}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg font-medium transition-colors duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition-colors duration-200"
+              >
+                Refrescar Página
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <DeletePost
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         postId={post.id}
         postTitle={post.title}
         onDelete={handleDelete}
+        isModerationAction={!isAuthor}
       />
     </>
   );
