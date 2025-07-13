@@ -70,13 +70,13 @@ const NotificationPermissionBanner: FC = () => {
   return (
     <>
       {showArrow && notificationPermissionService.getPermissionStatus() !== 'denied' && (
-        <div className="fixed top-14 sm:top-16 right-2 sm:right-4 z-[10001] pointer-events-none">
-          <div className="flex flex-col items-center animate-bounce">
-            <div className="bg-yellow-400 text-black px-2 py-1 rounded text-xs font-bold shadow-lg mb-1">
-              ¡Clic aquí!
+        <div className="hidden sm:block fixed top-2 left-2 z-[10001] pointer-events-none">
+          <div className="flex items-center space-x-2 animate-bounce">
+            <div className="bg-yellow-400 text-black px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+              Habilita las notificaciones aquí ↗️
             </div>
-            <svg className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+            <svg className="w-6 h-6 text-yellow-400 transform rotate-45" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
           </div>
         </div>
@@ -156,13 +156,13 @@ const NotificationPermissionBanner: FC = () => {
         </div>
 
         {showArrow && notificationPermissionService.getPermissionStatus() !== 'denied' && (
-          <div className="fixed top-14 sm:top-16 right-2 sm:right-4 z-[10001] pointer-events-none">
-            <div className="flex flex-col items-center animate-bounce">
-              <div className="bg-yellow-400 text-black px-2 py-1 rounded text-xs font-bold shadow-lg mb-1">
-                ¡Clic aquí!
+          <div className="hidden sm:block fixed top-2 left-2 z-[10001] pointer-events-none">
+            <div className="flex items-center space-x-2 animate-bounce">
+              <div className="bg-yellow-400 text-black px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                Habilita las notificaciones aquí ↗️
               </div>
-              <svg className="w-4 h-4 sm:w-6 sm:h-6 text-yellow-400" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+              <svg className="w-6 h-6 text-yellow-400 transform rotate-45" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>
             </div>
           </div>
