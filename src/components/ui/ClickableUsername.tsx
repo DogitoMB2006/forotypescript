@@ -13,7 +13,6 @@ interface ClickableUsernameProps {
 const ClickableUsername: FC<ClickableUsernameProps> = ({ 
   userId, 
   username, 
-  displayName, 
   className = '', 
   children 
 }) => {

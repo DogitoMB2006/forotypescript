@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useState, useRef } from 'react';
-import { updateUserProfile, uploadProfileImage, uploadBannerImage, deleteProfileImage, deleteBannerImage, checkUsernameAvailability } from '../../services/userService';
+import { updateUserProfile, uploadProfileImage, uploadBannerImage, checkUsernameAvailability } from '../../services/userService';
 import type { UserProfile } from '../../services/userService';
 
 interface EditProfileProps {

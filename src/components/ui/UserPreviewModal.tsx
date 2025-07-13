@@ -13,7 +13,7 @@ interface UserPreviewModalProps {
   anchorPosition?: { x: number; y: number };
 }
 
-const UserPreviewModal: FC<UserPreviewModalProps> = ({ userId, username, isOpen, onClose, anchorPosition }) => {
+const UserPreviewModal: FC<UserPreviewModalProps> = ({ userId, isOpen, onClose, anchorPosition }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const modalRef = useRef<HTMLDivElement>(null);
