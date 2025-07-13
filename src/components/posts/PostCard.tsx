@@ -8,6 +8,7 @@ import { getUserProfile } from '../../services/userService';
 import type { Post } from '../../services/postService';
 import type { UserProfile } from '../../services/userService';
 import DeletePost from './DeletePost';
+import LikeButton from './LikeButton';
 import Avatar from '../ui/Avatar';
 import ClickableUsername from '../ui/ClickableUsername';
 import DefaultBadge from '../user/DefaultBadge';
@@ -186,25 +187,24 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
               )}
               
               <div className="flex items-center space-x-4 sm:space-x-6 text-gray-500 pt-3 sm:pt-4 border-t border-gray-800">
-                <button 
-                  className="flex items-center space-x-1 sm:space-x-2 hover:text-red-400 transition-colors duration-200 py-1 sm:py-2 px-2 sm:px-3 rounded-lg hover:bg-red-900/20"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                  </svg>
-                  <span className="text-xs sm:text-sm">{post.likes}</span>
-                </button>
+                <LikeButton
+                  postId={post.id}
+                  initialLikes={post.likes || 0}
+                  initialLikedBy={post.likedBy || []}
+                  size="md"
+                  showCount={true}
+                />
                 
-                <button 
+                <Link
+                  to={`/post/${post.id}#comments`}
                   className="flex items-center space-x-1 sm:space-x-2 hover:text-blue-400 transition-colors duration-200 py-1 sm:py-2 px-2 sm:px-3 rounded-lg hover:bg-blue-900/20"
-                  onClick={(e) => e.preventDefault()}
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
                   <span className="text-xs sm:text-sm">{commentCount}</span>
-                </button>
+                </Link>
                 
                 <button 
                   className="flex items-center space-x-1 sm:space-x-2 hover:text-green-400 transition-colors duration-200 py-1 sm:py-2 px-2 sm:px-3 rounded-lg hover:bg-green-900/20"

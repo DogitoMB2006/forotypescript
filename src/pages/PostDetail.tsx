@@ -9,6 +9,7 @@ import type { Post } from '../services/postService';
 import type { UserProfile } from '../services/userService';
 import DeletePost from '../components/posts/DeletePost';
 import CommentList from '../components/posts/comments/CommentList';
+import LikeButton from '../components/posts/LikeButton';
 import Avatar from '../components/ui/Avatar';
 import ClickableUsername from '../components/ui/ClickableUsername';
 import DefaultBadge from '../components/user/DefaultBadge';
@@ -260,14 +261,23 @@ const PostDetail: FC = () => {
               )}
 
               <div className="flex flex-wrap items-center gap-4 sm:gap-8 text-gray-500 border-t border-gray-800 pt-4 sm:pt-6">
-                <button className="flex items-center space-x-1 sm:space-x-2 hover:text-red-400 transition-colors duration-200 py-2 px-3 rounded-lg hover:bg-red-900/20">
-                  <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                  </svg>
-                  <span className="text-sm sm:text-base">{post.likes} Me gusta</span>
-                </button>
+                <LikeButton
+                  postId={post.id}
+                  initialLikes={post.likes || 0}
+                  initialLikedBy={post.likedBy || []}
+                  size="lg"
+                  showCount={true}
+                />
                 
-                <button className="flex items-center space-x-1 sm:space-x-2 hover:text-blue-400 transition-colors duration-200 py-2 px-3 rounded-lg hover:bg-blue-900/20">
+                <button 
+                  onClick={() => {
+                    const commentsSection = document.getElementById('comments');
+                    if (commentsSection) {
+                      commentsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                  }}
+                  className="flex items-center space-x-1 sm:space-x-2 hover:text-blue-400 transition-colors duration-200 py-2 px-3 rounded-lg hover:bg-blue-900/20"
+                >
                   <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                   </svg>
@@ -284,7 +294,7 @@ const PostDetail: FC = () => {
             </div>
           </div>
 
-          <div className="mt-6 sm:mt-8 bg-gray-900 border border-gray-800 rounded-lg p-4 sm:p-6">
+          <div id="comments" className="mt-6 sm:mt-8 bg-gray-900 border border-gray-800 rounded-lg p-4 sm:p-6 scroll-mt-24">
             <h3 className="text-lg sm:text-xl font-bold text-white mb-4 sm:mb-6">Comentarios</h3>
             <CommentList postId={post.id} />
           </div>
