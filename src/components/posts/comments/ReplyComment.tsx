@@ -64,16 +64,16 @@ const ReplyComment: FC<ReplyCommentProps> = ({ parentComment, postId, onReplyCre
   };
 
   return (
-    <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 ml-8 mt-2">
-      <div className="flex items-start space-x-3">
+    <div className="bg-gray-800 border border-gray-600 rounded-lg p-2 sm:p-3 ml-0 sm:ml-2">
+      <div className="flex items-start space-x-2 sm:space-x-3">
         <Avatar 
           src={userProfile?.profileImageUrl}
           name={userProfile?.displayName || 'Usuario'}
           size="sm"
-          className="flex-shrink-0"
+          className="flex-shrink-0 mt-1"
         />
         
-        <form onSubmit={handleSubmit} className="flex-1">
+        <form onSubmit={handleSubmit} className="flex-1 min-w-0">
           {error && (
             <div className="mb-2 p-2 bg-red-900/50 border border-red-500 rounded text-red-300 text-xs">
               {error}
@@ -84,28 +84,29 @@ const ReplyComment: FC<ReplyCommentProps> = ({ parentComment, postId, onReplyCre
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder={`Responder a @${parentComment.authorUsername}...`}
-            className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            className="w-full bg-gray-900 border border-gray-600 rounded px-2 sm:px-3 py-1.5 sm:py-2 text-white placeholder-gray-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none break-words"
             rows={2}
             maxLength={500}
             disabled={isSubmitting}
             autoFocus
+            style={{ minHeight: '60px' }}
           />
           
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-xs text-gray-500">{content.length}/500</span>
-            <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-between mt-1.5 sm:mt-2 gap-2">
+            <span className="text-xs text-gray-500 flex-shrink-0">{content.length}/500</span>
+            <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
               <button
                 type="button"
                 onClick={onCancel}
                 disabled={isSubmitting}
-                className="text-gray-400 hover:text-white px-3 py-1 rounded text-xs transition-colors duration-200"
+                className="text-gray-400 hover:text-white px-2 sm:px-3 py-1 rounded text-xs transition-colors duration-200"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={!content.trim() || isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-3 py-1 rounded text-xs font-medium transition-colors duration-200"
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-2 sm:px-3 py-1 rounded text-xs font-medium transition-colors duration-200"
               >
                 {isSubmitting ? 'Enviando...' : 'Responder'}
               </button>

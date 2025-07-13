@@ -56,18 +56,18 @@ const CreateComment: FC<CreateCommentProps> = ({ postId, onCommentCreated }) => 
   };
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-      <div className="flex items-start space-x-3">
+    <div className="bg-gray-800 border border-gray-700 rounded-lg p-3 sm:p-4">
+      <div className="flex items-start space-x-2 sm:space-x-3">
         <Avatar 
           src={userProfile?.profileImageUrl}
           name={userProfile?.displayName || 'Usuario'}
           size="md"
-          className="flex-shrink-0"
+          className="flex-shrink-0 mt-1"
         />
         
-        <form onSubmit={handleSubmit} className="flex-1">
+        <form onSubmit={handleSubmit} className="flex-1 min-w-0">
           {error && (
-            <div className="mb-3 p-2 bg-red-900/50 border border-red-500 rounded text-red-300 text-sm">
+            <div className="mb-3 p-2 sm:p-3 bg-red-900/50 border border-red-500 rounded text-red-300 text-xs sm:text-sm">
               {error}
             </div>
           )}
@@ -76,18 +76,19 @@ const CreateComment: FC<CreateCommentProps> = ({ postId, onCommentCreated }) => 
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Escribe un comentario..."
-            className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            className="w-full bg-gray-900 border border-gray-600 rounded-lg px-3 py-2 sm:px-4 sm:py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm sm:text-base break-words"
             rows={3}
             maxLength={500}
             disabled={isSubmitting}
+            style={{ minHeight: '80px' }}
           />
           
-          <div className="flex items-center justify-between mt-3">
-            <span className="text-xs text-gray-500">{content.length}/500</span>
+          <div className="flex items-center justify-between mt-2 sm:mt-3 gap-2">
+            <span className="text-xs text-gray-500 flex-shrink-0">{content.length}/500</span>
             <button
               type="submit"
               disabled={!content.trim() || isSubmitting}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-200 flex-shrink-0"
             >
               {isSubmitting ? 'Enviando...' : 'Comentar'}
             </button>
