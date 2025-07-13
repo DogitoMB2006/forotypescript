@@ -5,6 +5,7 @@ import LoginPage from '../pages/Login';
 import RegisterPage from '../pages/Register';
 import CreatePostPage from '../pages/CreatePost';
 import PostDetail from '../pages/PostDetail';
+import ProfilePage from '../pages/Profile';
 
 export const router = createBrowserRouter([
   {
@@ -22,6 +23,14 @@ export const router = createBrowserRouter([
       {
         path: '/post/:id',
         element: <PostDetail />
+      },
+      {
+        path: '/perfil',
+        element: <ProfilePage />
+      },
+      {
+        path: '/perfil/:userId',
+        element: <ProfilePage />
       }
     ]
   },

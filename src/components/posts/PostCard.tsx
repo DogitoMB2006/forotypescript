@@ -4,8 +4,12 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { deletePost } from '../../services/postService';
 import { getCommentCount } from '../../services/commentService';
+import { getUserProfile } from '../../services/userService';
 import type { Post } from '../../services/postService';
+import type { UserProfile } from '../../services/userService';
 import DeletePost from './DeletePost';
+import Avatar from '../ui/Avatar';
+import ClickableUsername from '../ui/ClickableUsername';
 
 interface PostCardProps {
   post: Post;
@@ -16,20 +20,25 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
   const { user } = useAuth();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
+  const [authorProfile, setAuthorProfile] = useState<UserProfile | null>(null);
   const isAuthor = user?.uid === post.authorId;
 
   useEffect(() => {
-    const fetchCommentCount = async () => {
+    const fetchData = async () => {
       try {
-        const count = await getCommentCount(post.id);
+        const [count, profile] = await Promise.all([
+          getCommentCount(post.id),
+          getUserProfile(post.authorId)
+        ]);
         setCommentCount(count);
+        setAuthorProfile(profile);
       } catch (error) {
-        console.error('Error fetching comment count:', error);
+        console.error('Error fetching data:', error);
       }
     };
 
-    fetchCommentCount();
-  }, [post.id]);
+    fetchData();
+  }, [post.id, post.authorId]);
 
   const formatTimeAgo = (timestamp: any) => {
     if (!timestamp) return 'Hace un momento';
@@ -80,16 +89,24 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
       <Link to={`/post/${post.id}`}>
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 hover:bg-gray-800/50 transition-all duration-200 cursor-pointer group shadow-lg hover:shadow-xl">
           <div className="flex items-start space-x-4">
-            <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 shadow-md">
-              <span className="text-white font-semibold text-lg">
-                {post.authorDisplayName?.charAt(0).toUpperCase()}
-              </span>
-            </div>
+            <Avatar 
+              src={authorProfile?.profileImageUrl}
+              name={post.authorDisplayName}
+              size="lg"
+              className="flex-shrink-0 shadow-md"
+            />
             
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-2">
-                  <h3 className="font-semibold text-white">{post.authorDisplayName}</h3>
+                  <ClickableUsername
+                    userId={post.authorId}
+                    username={post.authorUsername}
+                    displayName={post.authorDisplayName}
+                    className="font-semibold text-white hover:text-blue-400"
+                  >
+                    {post.authorDisplayName}
+                  </ClickableUsername>
                   <span className="text-gray-500">@{post.authorUsername}</span>
                   <span className="text-gray-600">•</span>
                   <span className="text-gray-500 text-sm">{formatTimeAgo(post.createdAt)}</span>

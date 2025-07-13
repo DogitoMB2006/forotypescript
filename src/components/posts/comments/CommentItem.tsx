@@ -1,11 +1,15 @@
 import type { FC } from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { deleteComment, updateComment } from '../../../services/commentService';
+import { getUserProfile } from '../../../services/userService';
 import type { Comment } from '../../../services/commentService';
+import type { UserProfile } from '../../../services/userService';
 import EditComment from './EditComment';
 import DeleteComment from './DeleteComment';
 import ReplyComment from './ReplyComment';
+import Avatar from '../../ui/Avatar';
+import ClickableUsername from '../../ui/ClickableUsername';
 
 interface CommentItemProps {
   comment: Comment;
@@ -21,7 +25,21 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showReplyForm, setShowReplyForm] = useState(false);
+  const [authorProfile, setAuthorProfile] = useState<UserProfile | null>(null);
   const isAuthor = user?.uid === comment.authorId;
+
+  useEffect(() => {
+    const fetchAuthorProfile = async () => {
+      try {
+        const profile = await getUserProfile(comment.authorId);
+        setAuthorProfile(profile);
+      } catch (error) {
+        console.error('Error fetching comment author profile:', error);
+      }
+    };
+
+    fetchAuthorProfile();
+  }, [comment.authorId]);
 
   const formatTimeAgo = (timestamp: any) => {
     if (!timestamp) return 'Hace un momento';
@@ -97,16 +115,24 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
     <>
       <div className={`bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors duration-200 ${marginLeft}`}>
         <div className="flex items-start space-x-3">
-          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-sm font-medium">
-              {comment.authorDisplayName?.charAt(0).toUpperCase()}
-            </span>
-          </div>
+          <Avatar 
+            src={authorProfile?.profileImageUrl}
+            name={comment.authorDisplayName}
+            size="md"
+            className="flex-shrink-0"
+          />
           
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-2">
-                <h4 className="font-medium text-white">{comment.authorDisplayName}</h4>
+                <ClickableUsername
+                  userId={comment.authorId}
+                  username={comment.authorUsername}
+                  displayName={comment.authorDisplayName}
+                  className="font-medium text-white hover:text-blue-400"
+                >
+                  {comment.authorDisplayName}
+                </ClickableUsername>
                 <span className="text-gray-500 text-sm">@{comment.authorUsername}</span>
                 <span className="text-gray-600">•</span>
                 <span className="text-gray-500 text-sm">{formatTimeAgo(comment.createdAt)}</span>

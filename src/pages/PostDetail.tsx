@@ -3,10 +3,14 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPostById, deletePost } from '../services/postService';
 import { getCommentCount } from '../services/commentService';
+import { getUserProfile } from '../services/userService';
 import { useAuth } from '../hooks/useAuth';
 import type { Post } from '../services/postService';
+import type { UserProfile } from '../services/userService';
 import DeletePost from '../components/posts/DeletePost';
 import CommentList from '../components/posts/comments/CommentList';
+import Avatar from '../components/ui/Avatar';
+import ClickableUsername from '../components/ui/ClickableUsername';
 
 const PostDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +18,7 @@ const PostDetail: FC = () => {
   const { user } = useAuth();
   const [post, setPost] = useState<Post | null>(null);
   const [commentCount, setCommentCount] = useState(0);
+  const [authorProfile, setAuthorProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -28,8 +33,12 @@ const PostDetail: FC = () => {
         const fetchedPost = await getPostById(id);
         if (fetchedPost) {
           setPost(fetchedPost);
-          const count = await getCommentCount(id);
+          const [count, profile] = await Promise.all([
+            getCommentCount(id),
+            getUserProfile(fetchedPost.authorId)
+          ]);
           setCommentCount(count);
+          setAuthorProfile(profile);
         } else {
           setError('Post no encontrado');
         }
@@ -120,7 +129,7 @@ const PostDetail: FC = () => {
       <div className="min-h-screen bg-gray-950 py-8">
         <div className="container mx-auto px-4 max-w-4xl">
           <div className="bg-red-900/50 border border-red-500 rounded-lg p-8 text-center">
-            <h2 className="text-2xl font-bold text-red-300 mb-4">{error}</h2>
+            <h2 className="text-2xl font-bold text-red-300 mb-4">{error || 'Post no encontrado'}</h2>
             <button 
               onClick={() => navigate('/')}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition-colors duration-200"
@@ -164,13 +173,20 @@ const PostDetail: FC = () => {
           <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
             <div className="p-8">
               <div className="flex items-center space-x-4 mb-6">
-                <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold text-2xl">
-                    {post.authorDisplayName?.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+                <Avatar 
+                  src={authorProfile?.profileImageUrl}
+                  name={post.authorDisplayName}
+                  size="xl"
+                />
                 <div>
-                  <h3 className="text-xl font-bold text-white">{post.authorDisplayName}</h3>
+                  <ClickableUsername
+                    userId={post.authorId}
+                    username={post.authorUsername}
+                    displayName={post.authorDisplayName}
+                    className="text-xl font-bold text-white hover:text-blue-400"
+                  >
+                    {post.authorDisplayName}
+                  </ClickableUsername>
                   <p className="text-gray-400">@{post.authorUsername}</p>
                   <p className="text-gray-500 text-sm">{formatDate(post.createdAt)}</p>
                 </div>

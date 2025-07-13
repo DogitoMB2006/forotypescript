@@ -2,6 +2,7 @@ import type { FC } from 'react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import Avatar from './Avatar';
 
 const Navbar: FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -38,13 +39,13 @@ const Navbar: FC = () => {
                 to="/categorias" 
                 className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
               >
-                Categorías | No funciona proximamente
+                Categorías
               </Link>
               <Link 
                 to="/trending" 
                 className="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
               >
-                Fijados
+                Trending
               </Link>
               {isAuthenticated && (
                 <Link 
@@ -78,11 +79,11 @@ const Navbar: FC = () => {
                     onClick={() => setShowUserMenu(!showUserMenu)}
                     className="flex items-center space-x-2 text-gray-300 hover:text-white px-3 py-2 rounded-md transition-colors duration-200"
                   >
-                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-medium">
-                        {userProfile?.displayName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
+                    <Avatar 
+                      src={userProfile?.profileImageUrl}
+                      name={userProfile?.displayName || user?.email || 'Usuario'}
+                      size="md"
+                    />
                     <span className="text-sm font-medium">{userProfile?.displayName || 'Usuario'}</span>
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -175,11 +176,11 @@ const Navbar: FC = () => {
             {isAuthenticated ? (
               <div className="pt-4 pb-3 border-t border-gray-800">
                 <div className="flex items-center px-5 mb-3">
-                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-                    <span className="text-white font-medium">
-                      {userProfile?.displayName?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
+                  <Avatar 
+                    src={userProfile?.profileImageUrl}
+                    name={userProfile?.displayName || user?.email || 'Usuario'}
+                    size="lg"
+                  />
                   <div className="ml-3">
                     <div className="text-white text-base font-medium">{userProfile?.displayName || 'Usuario'}</div>
                     <div className="text-gray-400 text-sm">{user?.email}</div>

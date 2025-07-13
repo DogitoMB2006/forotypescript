@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { createComment } from '../../../services/commentService';
 import type { Comment } from '../../../services/commentService';
+import Avatar from '../../ui/Avatar';
 
 interface ReplyCommentProps {
   parentComment: Comment;
@@ -65,11 +66,12 @@ const ReplyComment: FC<ReplyCommentProps> = ({ parentComment, postId, onReplyCre
   return (
     <div className="bg-gray-800 border border-gray-600 rounded-lg p-3 ml-8 mt-2">
       <div className="flex items-start space-x-3">
-        <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-xs font-medium">
-            {userProfile?.displayName?.charAt(0).toUpperCase()}
-          </span>
-        </div>
+        <Avatar 
+          src={userProfile?.profileImageUrl}
+          name={userProfile?.displayName || 'Usuario'}
+          size="sm"
+          className="flex-shrink-0"
+        />
         
         <form onSubmit={handleSubmit} className="flex-1">
           {error && (

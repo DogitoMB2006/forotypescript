@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAuth } from '../../../hooks/useAuth';
 import { createComment } from '../../../services/commentService';
 import type { Comment } from '../../../services/commentService';
+import Avatar from '../../ui/Avatar';
 
 interface CreateCommentProps {
   postId: string;
@@ -57,11 +58,12 @@ const CreateComment: FC<CreateCommentProps> = ({ postId, onCommentCreated }) => 
   return (
     <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
       <div className="flex items-start space-x-3">
-        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-          <span className="text-white text-sm font-medium">
-            {userProfile?.displayName?.charAt(0).toUpperCase()}
-          </span>
-        </div>
+        <Avatar 
+          src={userProfile?.profileImageUrl}
+          name={userProfile?.displayName || 'Usuario'}
+          size="md"
+          className="flex-shrink-0"
+        />
         
         <form onSubmit={handleSubmit} className="flex-1">
           {error && (

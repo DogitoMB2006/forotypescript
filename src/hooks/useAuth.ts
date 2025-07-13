@@ -9,7 +9,11 @@ interface UserProfile {
   email: string;
   username: string;
   displayName: string;
+  bio?: string;
+  profileImageUrl?: string;
+  bannerImageUrl?: string;
   createdAt: Date;
+  updatedAt?: Date;
 }
 
 export const useAuth = () => {
