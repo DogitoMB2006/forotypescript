@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { getUserProfile } from '../../services/userService';
 import type { UserProfile } from '../../services/userService';
 import Avatar from './Avatar';
+import BadgeList from '../user/BadgeList';
 
 interface UserPreviewModalProps {
   userId: string;
@@ -161,6 +162,10 @@ const UserPreviewModal: FC<UserPreviewModalProps> = ({ userId, isOpen, onClose, 
           <div className="mb-3">
             <h3 className="font-bold text-white text-lg leading-tight">{userProfile.displayName}</h3>
             <p className="text-gray-400 text-sm">@{userProfile.username}</p>
+          </div>
+          
+          <div className="mb-4">
+            <BadgeList userId={userProfile.uid} size="sm" />
           </div>
           
           {userProfile.bio && (

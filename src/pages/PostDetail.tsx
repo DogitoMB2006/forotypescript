@@ -11,6 +11,7 @@ import DeletePost from '../components/posts/DeletePost';
 import CommentList from '../components/posts/comments/CommentList';
 import Avatar from '../components/ui/Avatar';
 import ClickableUsername from '../components/ui/ClickableUsername';
+import DefaultBadge from '../components/user/DefaultBadge';
 
 const PostDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +23,7 @@ const PostDetail: FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [refreshProfile, setRefreshProfile] = useState(0);
 
   const isAuthor = user?.uid === post?.authorId;
 
@@ -51,7 +53,15 @@ const PostDetail: FC = () => {
     };
 
     fetchPost();
-  }, [id]);
+  }, [id, refreshProfile]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshProfile(prev => prev + 1);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const handleDelete = async (postId: string) => {
     try {
@@ -179,14 +189,17 @@ const PostDetail: FC = () => {
                   size="xl"
                 />
                 <div>
-                  <ClickableUsername
-                    userId={post.authorId}
-                    username={post.authorUsername}
-                    displayName={post.authorDisplayName}
-                    className="text-xl font-bold text-white hover:text-blue-400"
-                  >
-                    {post.authorDisplayName}
-                  </ClickableUsername>
+                  <div className="flex items-center space-x-2">
+                    <ClickableUsername
+                      userId={post.authorId}
+                      username={post.authorUsername}
+                      displayName={post.authorDisplayName}
+                      className="text-xl font-bold text-white hover:text-blue-400"
+                    >
+                      {post.authorDisplayName}
+                    </ClickableUsername>
+                    <DefaultBadge badgeId={(authorProfile as any)?.defaultBadgeId} size="md" />
+                  </div>
                   <p className="text-gray-400">@{post.authorUsername}</p>
                   <p className="text-gray-500 text-sm">{formatDate(post.createdAt)}</p>
                 </div>

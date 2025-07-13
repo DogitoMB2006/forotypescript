@@ -10,6 +10,7 @@ import type { UserProfile } from '../../services/userService';
 import DeletePost from './DeletePost';
 import Avatar from '../ui/Avatar';
 import ClickableUsername from '../ui/ClickableUsername';
+import DefaultBadge from '../user/DefaultBadge';
 
 interface PostCardProps {
   post: Post;
@@ -21,6 +22,7 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
   const [authorProfile, setAuthorProfile] = useState<UserProfile | null>(null);
+  const [refreshProfile, setRefreshProfile] = useState(0);
   const isAuthor = user?.uid === post.authorId;
 
   useEffect(() => {
@@ -38,7 +40,15 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
     };
 
     fetchData();
-  }, [post.id, post.authorId]);
+  }, [post.id, post.authorId, refreshProfile]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshProfile(prev => prev + 1);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const formatTimeAgo = (timestamp: any) => {
     if (!timestamp) return 'Hace un momento';
@@ -99,14 +109,17 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center space-x-2">
-                  <ClickableUsername
-                    userId={post.authorId}
-                    username={post.authorUsername}
-                    displayName={post.authorDisplayName}
-                    className="font-semibold text-white hover:text-blue-400"
-                  >
-                    {post.authorDisplayName}
-                  </ClickableUsername>
+                  <div className="flex items-center space-x-2">
+                    <ClickableUsername
+                      userId={post.authorId}
+                      username={post.authorUsername}
+                      displayName={post.authorDisplayName}
+                      className="font-semibold text-white hover:text-blue-400"
+                    >
+                      {post.authorDisplayName}
+                    </ClickableUsername>
+                    <DefaultBadge badgeId={(authorProfile as any)?.defaultBadgeId} size="sm" />
+                  </div>
                   <span className="text-gray-500">@{post.authorUsername}</span>
                   <span className="text-gray-600">•</span>
                   <span className="text-gray-500 text-sm">{formatTimeAgo(post.createdAt)}</span>

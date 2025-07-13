@@ -24,7 +24,10 @@ const Profile: FC<ProfileProps> = ({ userId }) => {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!targetUserId) return;
+      if (!targetUserId) {
+        setLoading(false);
+        return;
+      }
 
       try {
         if (isOwnProfile && currentUserProfile) {
@@ -68,11 +71,21 @@ const Profile: FC<ProfileProps> = ({ userId }) => {
     );
   }
 
-  if (error || !profile) {
+  if (error) {
     return (
       <div className="max-w-4xl mx-auto">
         <div className="bg-red-900/50 border border-red-500 rounded-lg p-8 text-center">
-          <h2 className="text-2xl font-bold text-red-300 mb-4">{error || 'Perfil no encontrado'}</h2>
+          <h2 className="text-2xl font-bold text-red-300 mb-4">{error}</h2>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-gray-900 border border-gray-800 rounded-lg p-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-300 mb-4">Perfil no encontrado</h2>
         </div>
       </div>
     );

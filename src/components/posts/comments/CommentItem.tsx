@@ -10,6 +10,7 @@ import DeleteComment from './DeleteComment';
 import ReplyComment from './ReplyComment';
 import Avatar from '../../ui/Avatar';
 import ClickableUsername from '../../ui/ClickableUsername';
+import DefaultBadge from '../../user/DefaultBadge';
 
 interface CommentItemProps {
   comment: Comment;
@@ -26,6 +27,7 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showReplyForm, setShowReplyForm] = useState(false);
   const [authorProfile, setAuthorProfile] = useState<UserProfile | null>(null);
+  const [refreshProfile, setRefreshProfile] = useState(0);
   const isAuthor = user?.uid === comment.authorId;
 
   useEffect(() => {
@@ -39,7 +41,15 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
     };
 
     fetchAuthorProfile();
-  }, [comment.authorId]);
+  }, [comment.authorId, refreshProfile]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefreshProfile(prev => prev + 1);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   const formatTimeAgo = (timestamp: any) => {
     if (!timestamp) return 'Hace un momento';
@@ -125,14 +135,17 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-2">
-                <ClickableUsername
-                  userId={comment.authorId}
-                  username={comment.authorUsername}
-                  displayName={comment.authorDisplayName}
-                  className="font-medium text-white hover:text-blue-400"
-                >
-                  {comment.authorDisplayName}
-                </ClickableUsername>
+                <div className="flex items-center space-x-2">
+                  <ClickableUsername
+                    userId={comment.authorId}
+                    username={comment.authorUsername}
+                    displayName={comment.authorDisplayName}
+                    className="font-medium text-white hover:text-blue-400"
+                  >
+                    {comment.authorDisplayName}
+                  </ClickableUsername>
+                  <DefaultBadge badgeId={(authorProfile as any)?.defaultBadgeId} size="sm" />
+                </div>
                 <span className="text-gray-500 text-sm">@{comment.authorUsername}</span>
                 <span className="text-gray-600">•</span>
                 <span className="text-gray-500 text-sm">{formatTimeAgo(comment.createdAt)}</span>

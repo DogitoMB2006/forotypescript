@@ -1,8 +1,11 @@
 import type { FC } from 'react';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { updateUserProfile, uploadProfileImage, uploadBannerImage, checkUsernameAvailability } from '../../services/userService';
 import type { UserProfile } from '../../services/userService';
+import { getUserBadges, setDefaultBadge } from '../../services/badgeService';
+import type { UserBadgeWithDetails } from '../../types/badge';
 import ImageCropModal from '../ui/ImageCropModal';
+import Badge from '../user/Badge';
 
 interface EditProfileProps {
   profile: UserProfile;
@@ -14,8 +17,10 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
   const [formData, setFormData] = useState({
     displayName: profile.displayName || '',
     username: profile.username || '',
-    bio: profile.bio || ''
+    bio: profile.bio || '',
+    defaultBadgeId: (profile as any).defaultBadgeId || ''
   });
+  const [userBadges, setUserBadges] = useState<UserBadgeWithDetails[]>([]);
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [bannerImage, setBannerImage] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
@@ -30,6 +35,19 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
 
   const profileImageRef = useRef<HTMLInputElement>(null);
   const bannerImageRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const fetchUserBadges = async () => {
+      try {
+        const badges = await getUserBadges(profile.uid);
+        setUserBadges(badges);
+      } catch (error) {
+        console.error('Error fetching user badges:', error);
+      }
+    };
+
+    fetchUserBadges();
+  }, [profile.uid]);
 
   const handleUsernameChange = async (newUsername: string) => {
     setFormData(prev => ({ ...prev, username: newUsername }));
@@ -148,10 +166,14 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
 
       await updateUserProfile(profile.uid, updates);
 
+      if (formData.defaultBadgeId !== (profile as any).defaultBadgeId) {
+        await setDefaultBadge(profile.uid, formData.defaultBadgeId || null);
+      }
+
       const updatedProfile: UserProfile = {
         ...profile,
         ...updates
-      };
+      } as UserProfile & { defaultBadgeId?: string };
 
       onProfileUpdated(updatedProfile);
     } catch (error) {
@@ -350,6 +372,70 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
               {formData.bio.length}/160
             </div>
           </div>
+
+          {userBadges.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-3">
+                Badge Predeterminado
+              </label>
+              <p className="text-gray-400 text-sm mb-4">
+                Selecciona un badge para mostrar en tus posts y comentarios
+              </p>
+              <div className="space-y-2">
+                <div className="grid grid-cols-1 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, defaultBadgeId: '' }))}
+                    className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors duration-200 ${
+                      !formData.defaultBadgeId 
+                        ? 'border-blue-500 bg-blue-900/30' 
+                        : 'border-gray-700 bg-gray-800 hover:border-gray-600'
+                    }`}
+                  >
+                    <div className="w-6 h-6 rounded-full bg-gray-600 flex items-center justify-center">
+                      <span className="text-xs text-gray-400">-</span>
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="text-white text-sm">Sin badge</div>
+                      <div className="text-gray-400 text-xs">No mostrar ningún badge</div>
+                    </div>
+                    {!formData.defaultBadgeId && (
+                      <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </button>
+                  {userBadges.map((userBadge) => (
+                    <button
+                      key={userBadge.badgeId}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, defaultBadgeId: userBadge.badgeId }))}
+                      className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors duration-200 ${
+                        formData.defaultBadgeId === userBadge.badgeId
+                          ? 'border-blue-500 bg-blue-900/30' 
+                          : 'border-gray-700 bg-gray-800 hover:border-gray-600'
+                      }`}
+                    >
+                      <Badge badge={userBadge.badge} size="sm" showTooltip={false} />
+                      <div className="flex-1 text-left">
+                        <div className="text-white text-sm">{userBadge.badge.name}</div>
+                        <div className="text-gray-400 text-xs">{userBadge.badge.description}</div>
+                      </div>
+                      {formData.defaultBadgeId === userBadge.badgeId && (
+                        <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center space-x-3 pt-4">
             <button
