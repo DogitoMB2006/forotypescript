@@ -2,6 +2,7 @@ import type { FC } from 'react';
 import { useState, useRef } from 'react';
 import { updateUserProfile, uploadProfileImage, uploadBannerImage, checkUsernameAvailability } from '../../services/userService';
 import type { UserProfile } from '../../services/userService';
+import ImageCropModal from '../ui/ImageCropModal';
 
 interface EditProfileProps {
   profile: UserProfile;
@@ -19,6 +20,9 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
   const [bannerImage, setBannerImage] = useState<File | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [bannerImagePreview, setBannerImagePreview] = useState<string | null>(null);
+  const [showProfileCrop, setShowProfileCrop] = useState(false);
+  const [showBannerCrop, setShowBannerCrop] = useState(false);
+  const [tempImageUrl, setTempImageUrl] = useState<string>('');
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -52,10 +56,11 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
   const handleProfileImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setProfileImage(file);
       const reader = new FileReader();
       reader.onload = (e) => {
-        setProfileImagePreview(e.target?.result as string);
+        const imageUrl = e.target?.result as string;
+        setTempImageUrl(imageUrl);
+        setShowProfileCrop(true);
       };
       reader.readAsDataURL(file);
     }
@@ -64,13 +69,32 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
   const handleBannerImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setBannerImage(file);
       const reader = new FileReader();
       reader.onload = (e) => {
-        setBannerImagePreview(e.target?.result as string);
+        const imageUrl = e.target?.result as string;
+        setTempImageUrl(imageUrl);
+        setShowBannerCrop(true);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleProfileCrop = (croppedFile: File) => {
+    setProfileImage(croppedFile);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setProfileImagePreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(croppedFile);
+  };
+
+  const handleBannerCrop = (croppedFile: File) => {
+    setBannerImage(croppedFile);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setBannerImagePreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(croppedFile);
   };
 
   const removeProfileImage = () => {
@@ -353,6 +377,24 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
           </div>
         </form>
       </div>
+
+      <ImageCropModal
+        isOpen={showProfileCrop}
+        onClose={() => setShowProfileCrop(false)}
+        onCrop={handleProfileCrop}
+        imageUrl={tempImageUrl}
+        aspectRatio={1}
+        title="Ajustar imagen de perfil"
+      />
+
+      <ImageCropModal
+        isOpen={showBannerCrop}
+        onClose={() => setShowBannerCrop(false)}
+        onCrop={handleBannerCrop}
+        imageUrl={tempImageUrl}
+        aspectRatio={16/9}
+        title="Ajustar imagen de banner"
+      />
     </div>
   );
 };
