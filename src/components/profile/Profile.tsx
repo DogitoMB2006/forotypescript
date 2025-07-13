@@ -18,6 +18,7 @@ const Profile: FC<ProfileProps> = ({ userId }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   const targetUserId = userId || user?.uid;
   const isOwnProfile = user?.uid === targetUserId;
@@ -45,7 +46,11 @@ const Profile: FC<ProfileProps> = ({ userId }) => {
     };
 
     fetchProfile();
-  }, [targetUserId, isOwnProfile, currentUserProfile]);
+    if (initialLoad) {
+      window.scrollTo(0, 0);
+      setInitialLoad(false);
+    }
+  }, [targetUserId, isOwnProfile, currentUserProfile, initialLoad]);
 
   const handleProfileUpdated = (updatedProfile: UserProfile) => {
     setProfile(updatedProfile);
@@ -57,14 +62,13 @@ const Profile: FC<ProfileProps> = ({ userId }) => {
       <div className="max-w-4xl mx-auto">
         <div className="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden animate-pulse">
           <div className="h-48 bg-gray-700"></div>
-          <div className="p-6">
-            <div className="flex items-start space-x-4 -mt-16">
-              <div className="w-24 h-24 bg-gray-700 rounded-full border-4 border-gray-900"></div>
-              <div className="flex-1 mt-12">
-                <div className="h-6 bg-gray-700 rounded w-1/3 mb-2"></div>
-                <div className="h-4 bg-gray-700 rounded w-1/4"></div>
-              </div>
-            </div>
+          <div className="relative">
+            <div className="absolute -bottom-12 left-6 w-24 h-24 bg-gray-700 rounded-full border-4 border-gray-900"></div>
+          </div>
+          <div className="pt-16 px-6 pb-6">
+            <div className="h-6 bg-gray-700 rounded w-1/3 mb-2"></div>
+            <div className="h-4 bg-gray-700 rounded w-1/4 mb-2"></div>
+            <div className="h-3 bg-gray-700 rounded w-1/5"></div>
           </div>
         </div>
       </div>

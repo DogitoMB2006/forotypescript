@@ -16,7 +16,7 @@ const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }
   const [showModerationPanel, setShowModerationPanel] = useState(false);
   
   const isModerator = user?.email === 'dogitomb2022@gmail.com';
-  const canModerate = isModerator;
+  const canModerate = isModerator && !isOwnProfile;
 
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('es-ES', {
@@ -41,38 +41,38 @@ const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }
           )}
         </div>
         
-        <div className="p-6">
-          <div className="flex items-start justify-between -mt-16">
-            <div className="flex items-start space-x-4">
-              <div className="relative">
-                {profile.profileImageUrl ? (
-                  <img
-                    src={profile.profileImageUrl}
-                    alt={profile.displayName}
-                    className="w-24 h-24 rounded-full border-4 border-gray-900 object-cover"
-                  />
-                ) : (
-                  <div className="w-24 h-24 bg-blue-600 rounded-full border-4 border-gray-900 flex items-center justify-center">
-                    <span className="text-white text-2xl font-bold">
-                      {profile.displayName?.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                )}
+        <div className="relative">
+          <div className="absolute -bottom-12 left-6 z-10">
+            {profile.profileImageUrl ? (
+              <img
+                src={profile.profileImageUrl}
+                alt={profile.displayName}
+                className="w-24 h-24 rounded-full border-4 border-gray-900 object-cover shadow-xl ring-2 ring-gray-800"
+              />
+            ) : (
+              <div className="w-24 h-24 bg-blue-600 rounded-full border-4 border-gray-900 flex items-center justify-center shadow-xl ring-2 ring-gray-800">
+                <span className="text-white text-2xl font-bold">
+                  {profile.displayName?.charAt(0).toUpperCase()}
+                </span>
               </div>
-              
-              <div className="mt-12">
-                <h1 className="text-2xl font-bold text-white">{profile.displayName}</h1>
-                <p className="text-gray-400">@{profile.username}</p>
-                <p className="text-gray-500 text-sm mt-1">
-                  Se unió en {formatDate(profile.createdAt)}
-                </p>
-                <div className="mt-3">
-                  <BadgeList userId={profile.uid} size="md" />
-                </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="px-6 pt-16 pb-6">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-bold text-white mb-1">{profile.displayName}</h1>
+              <p className="text-gray-400 mb-2">@{profile.username}</p>
+              <p className="text-gray-500 text-sm mb-4">
+                Se unió en {formatDate(profile.createdAt)}
+              </p>
+              <div>
+                <BadgeList userId={profile.uid} size="md" />
               </div>
             </div>
             
-            <div className="mt-12 flex items-center space-x-3">
+            <div className="flex items-center space-x-3 ml-6">
               {isOwnProfile && (
                 <button
                   onClick={onEdit}
