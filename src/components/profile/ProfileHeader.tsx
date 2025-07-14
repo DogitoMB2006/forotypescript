@@ -73,12 +73,6 @@ const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }
     boxShadow: `0 0 0 2px ${accentColor}, 0 25px 25px -5px rgba(0, 0, 0, 0.25)`
   });
 
-  const getEditButtonStyle = () => ({
-    background: `linear-gradient(135deg, ${accentColor}, ${primaryColor})`,
-    borderColor: primaryColor,
-    color: textColor
-  });
-
   return (
     <>
       <div 

@@ -81,11 +81,6 @@ const ProfilePosts: FC<ProfilePostsProps> = ({ userId, username }) => {
     background: isActive ? `rgba(255, 255, 255, 0.1)` : 'transparent'
   });
 
-  const getEmptyStateStyle = () => ({
-    color: textColor,
-    opacity: 0.7
-  });
-
   return (
     <div 
       className="border border-gray-800 rounded-lg shadow-lg transition-all duration-300"

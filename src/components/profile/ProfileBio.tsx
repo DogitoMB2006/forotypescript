@@ -39,12 +39,6 @@ const ProfileBio: FC<ProfileBioProps> = ({ profile, isOwnProfile }) => {
   const textColor = isLightColor(accentColor) ? '#000000' : '#FFFFFF';
   const secondaryTextColor = isLightColor(primaryColor) ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)';
 
-  const getStatsItemStyle = (isHovered: boolean) => ({
-    background: isHovered ? `linear-gradient(135deg, ${primaryColor}20, ${accentColor}20)` : 'transparent',
-    borderColor: isHovered ? primaryColor : 'transparent',
-    color: isHovered ? textColor : '#FFFFFF'
-  });
-
   return (
     <div 
       className="border border-gray-800 rounded-lg p-6 shadow-lg transition-all duration-300"
