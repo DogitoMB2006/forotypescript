@@ -3,6 +3,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { createPost } from '../../services/postService';
+import CategorySelector from '../categories/CategorySelector';
 
 interface CreatePostProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ const CreatePost: FC<CreatePostProps> = ({ isOpen, onClose, onSuccess }) => {
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [images, setImages] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -80,11 +82,13 @@ const CreatePost: FC<CreatePostProps> = ({ isOpen, onClose, onSuccess }) => {
         images,
         authorId: user.uid,
         authorUsername: userProfile.username,
-        authorDisplayName: userProfile.displayName
+        authorDisplayName: userProfile.displayName,
+        categoryId
       });
 
       setTitle('');
       setContent('');
+      setCategoryId(null);
       setImages([]);
       setImagePreviews([]);
       
@@ -105,8 +109,8 @@ const CreatePost: FC<CreatePostProps> = ({ isOpen, onClose, onSuccess }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-2xl h-full sm:h-auto sm:max-h-[90vh] overflow-hidden transform transition-all duration-300 scale-100 animate-in flex flex-col">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-start justify-center z-50 p-2 sm:p-4 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-700 hover:scrollbar-thumb-gray-600">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-2xl my-4 sm:my-8 overflow-hidden transform transition-all duration-300 scale-100 animate-in flex flex-col max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)]">
         <div className="p-4 sm:p-6 border-b border-gray-800 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center space-x-3">
             {userProfile?.profileImageUrl ? (
@@ -143,8 +147,8 @@ const CreatePost: FC<CreatePostProps> = ({ isOpen, onClose, onSuccess }) => {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
-          <div className="p-4 sm:p-6 flex-1 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="p-4 sm:p-6 flex-1 overflow-y-auto min-h-0 scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500">
             <div className="space-y-4 sm:space-y-6">
               <div>
                 <input
@@ -205,6 +209,12 @@ const CreatePost: FC<CreatePostProps> = ({ isOpen, onClose, onSuccess }) => {
                   </div>
                 </div>
               )}
+
+              <CategorySelector
+                selectedCategory={categoryId}
+                onCategorySelect={setCategoryId}
+                className="pb-2"
+              />
             </div>
           </div>
 

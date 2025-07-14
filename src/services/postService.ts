@@ -9,6 +9,7 @@ export interface CreatePostData {
   authorId: string;
   authorUsername: string;
   authorDisplayName: string;
+  categoryId?: string | null;
 }
 
 export interface Post {
@@ -19,6 +20,7 @@ export interface Post {
   authorId: string;
   authorUsername: string;
   authorDisplayName: string;
+  categoryId?: string | null;
   createdAt: any;
   updatedAt: any;
   likes: number;
@@ -49,6 +51,7 @@ export const createPost = async (postData: CreatePostData) => {
       authorId: postData.authorId,
       authorUsername: postData.authorUsername,
       authorDisplayName: postData.authorDisplayName,
+      categoryId: postData.categoryId || null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
       likes: 0,

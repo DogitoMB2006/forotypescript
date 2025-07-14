@@ -14,6 +14,7 @@ import Avatar from '../ui/Avatar';
 import ClickableUsername from '../ui/ClickableUsername';
 import DefaultBadge from '../user/DefaultBadge';
 import UserRoleDisplay from '../user/UserRoleDisplay';
+import CategoryBadge from '../categories/CategoryBadge';
 
 interface PostCardProps {
   post: Post;
@@ -242,34 +243,42 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
                 </div>
               )}
               
-              <div className="flex items-center space-x-4 sm:space-x-6 text-gray-500 pt-3 sm:pt-4 border-t border-gray-800">
-                <LikeButton
-                  postId={post.id}
-                  initialLikes={post.likes || 0}
-                  initialLikedBy={post.likedBy || []}
-                  size="md"
-                  showCount={true}
+              <div className="flex items-center justify-between text-gray-500 pt-3 sm:pt-4 border-t border-gray-800">
+                <div className="flex items-center space-x-4 sm:space-x-6">
+                  <LikeButton
+                    postId={post.id}
+                    initialLikes={post.likes || 0}
+                    initialLikedBy={post.likedBy || []}
+                    size="md"
+                    showCount={true}
+                  />
+                  
+                  <Link
+                    to={`/post/${post.id}#comments`}
+                    className="flex items-center space-x-1 sm:space-x-2 hover:text-blue-400 transition-colors duration-200 py-1 sm:py-2 px-2 sm:px-3 rounded-lg hover:bg-blue-900/20"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    <span className="text-xs sm:text-sm">{commentCount}</span>
+                  </Link>
+                  
+                  <button 
+                    className="flex items-center space-x-1 sm:space-x-2 hover:text-green-400 transition-colors duration-200 py-1 sm:py-2 px-2 sm:px-3 rounded-lg hover:bg-green-900/20"
+                    onClick={(e) => e.preventDefault()}
+                  >
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                    </svg>
+                  </button>
+                </div>
+
+                <CategoryBadge 
+                  categoryId={post.categoryId} 
+                  size="sm"
+                  className="flex-shrink-0"
                 />
-                
-                <Link
-                  to={`/post/${post.id}#comments`}
-                  className="flex items-center space-x-1 sm:space-x-2 hover:text-blue-400 transition-colors duration-200 py-1 sm:py-2 px-2 sm:px-3 rounded-lg hover:bg-blue-900/20"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                  <span className="text-xs sm:text-sm">{commentCount}</span>
-                </Link>
-                
-                <button 
-                  className="flex items-center space-x-1 sm:space-x-2 hover:text-green-400 transition-colors duration-200 py-1 sm:py-2 px-2 sm:px-3 rounded-lg hover:bg-green-900/20"
-                  onClick={(e) => e.preventDefault()}
-                >
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-                  </svg>
-                </button>
               </div>
             </div>
           </div>

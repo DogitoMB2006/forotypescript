@@ -14,6 +14,7 @@ import Avatar from '../components/ui/Avatar';
 import ClickableUsername from '../components/ui/ClickableUsername';
 import DefaultBadge from '../components/user/DefaultBadge';
 import UserRoleDisplay from '../components/user/UserRoleDisplay';
+import CategoryBadge from '../components/categories/CategoryBadge';
 
 const PostDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -256,6 +257,13 @@ const PostDetail: FC = () => {
               </div>
 
               <h1 className="text-xl sm:text-3xl font-bold text-white mb-4 sm:mb-6 leading-tight">{post.title}</h1>
+              
+              <div className="flex items-center mb-4 sm:mb-6">
+                <CategoryBadge 
+                  categoryId={post.categoryId} 
+                  size="md"
+                />
+              </div>
               
               <div className="text-gray-200 text-base sm:text-lg leading-relaxed whitespace-pre-wrap mb-4 sm:mb-6 break-words">
                 {processContent(post.content)}
