@@ -9,6 +9,7 @@ import type { CustomProfileTheme } from '../../types/profileTheme';
 import ImageCropModal from '../ui/ImageCropModal';
 import Badge from '../user/Badge';
 import ProfileThemeSelector from './ProfileThemeSelector';
+import BannerUploadModal from './BannerUploadModal';
 
 interface EditProfileProps {
   profile: UserProfile;
@@ -30,10 +31,12 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
   const [userBadges, setUserBadges] = useState<UserBadgeWithDetails[]>([]);
   const [profileImage, setProfileImage] = useState<File | null>(null);
   const [bannerImage, setBannerImage] = useState<File | null>(null);
+  const [bannerGifUrl, setBannerGifUrl] = useState<string | null>(null);
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [bannerImagePreview, setBannerImagePreview] = useState<string | null>(null);
   const [showProfileCrop, setShowProfileCrop] = useState(false);
   const [showBannerCrop, setShowBannerCrop] = useState(false);
+  const [showBannerModal, setShowBannerModal] = useState(false);
   const [tempImageUrl, setTempImageUrl] = useState<string>('');
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
@@ -41,7 +44,6 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
   const [error, setError] = useState('');
 
   const profileImageRef = useRef<HTMLInputElement>(null);
-  const bannerImageRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchUserBadges = async () => {
@@ -101,17 +103,22 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
     }
   };
 
-  const handleBannerImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageUrl = e.target?.result as string;
-        setTempImageUrl(imageUrl);
-        setShowBannerCrop(true);
-      };
-      reader.readAsDataURL(file);
-    }
+
+
+  const handleBannerFileSelect = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const imageUrl = e.target?.result as string;
+      setTempImageUrl(imageUrl);
+      setShowBannerCrop(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleBannerGifSelect = (gifUrl: string) => {
+    setBannerGifUrl(gifUrl);
+    setBannerImagePreview(gifUrl);
+    setBannerImage(null);
   };
 
   const handleProfileCrop = (croppedFile: File) => {
@@ -130,6 +137,7 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
       setBannerImagePreview(e.target?.result as string);
     };
     reader.readAsDataURL(croppedFile);
+    setBannerGifUrl(null);
   };
 
   const removeProfileImage = () => {
@@ -143,9 +151,7 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
   const removeBannerImage = () => {
     setBannerImage(null);
     setBannerImagePreview(null);
-    if (bannerImageRef.current) {
-      bannerImageRef.current.value = '';
-    }
+    setBannerGifUrl(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -179,6 +185,8 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
       if (bannerImage) {
         const bannerImageUrl = await uploadBannerImage(profile.uid, bannerImage);
         updates.bannerImageUrl = bannerImageUrl;
+      } else if (bannerGifUrl) {
+        updates.bannerImageUrl = bannerGifUrl;
       }
 
       await updateUserProfile(profile.uid, updates);
@@ -242,7 +250,7 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
             </label>
             <div 
               className="relative h-32 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg overflow-hidden cursor-pointer group"
-              onClick={() => bannerImageRef.current?.click()}
+              onClick={() => setShowBannerModal(true)}
               style={{
                 backgroundImage: bannerImagePreview || profile.bannerImageUrl ? 
                   `url(${bannerImagePreview || profile.bannerImageUrl})` : undefined,
@@ -269,13 +277,6 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
                 </button>
               )}
             </div>
-            <input
-              ref={bannerImageRef}
-              type="file"
-              accept="image/*"
-              onChange={handleBannerImageChange}
-              className="hidden"
-            />
           </div>
 
           <div>
@@ -487,6 +488,13 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
           </div>
         </form>
       </div>
+
+      <BannerUploadModal
+        isOpen={showBannerModal}
+        onClose={() => setShowBannerModal(false)}
+        onFileSelect={handleBannerFileSelect}
+        onGifSelect={handleBannerGifSelect}
+      />
 
       <ImageCropModal
         isOpen={showProfileCrop}
