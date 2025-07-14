@@ -6,6 +6,8 @@ import RegisterPage from '../pages/Register';
 import CreatePostPage from '../pages/CreatePost';
 import PostDetail from '../pages/PostDetail';
 import ProfilePage from '../pages/Profile';
+import Categories from '../pages/Categories';
+import CategoryDetail from '../pages/CategoryDetail';
 
 export const router = createBrowserRouter([
   {
@@ -31,6 +33,14 @@ export const router = createBrowserRouter([
       {
         path: '/perfil/:userId',
         element: <ProfilePage />
+      },
+      {
+        path: '/categorias',
+        element: <Categories />
+      },
+      {
+        path: '/categorias/:categoryId',
+        element: <CategoryDetail />
       }
     ]
   },
