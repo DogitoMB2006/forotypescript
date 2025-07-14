@@ -6,9 +6,10 @@ interface AvatarProps {
   name: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
+  style?: React.CSSProperties;
 }
 
-const Avatar: FC<AvatarProps> = ({ src, alt, name, size = 'md', className = '' }) => {
+const Avatar: FC<AvatarProps> = ({ src, alt, name, size = 'md', className = '', style }) => {
   const sizeClasses = {
     sm: 'w-6 h-6 text-xs',
     md: 'w-8 h-8 text-sm',
@@ -26,12 +27,16 @@ const Avatar: FC<AvatarProps> = ({ src, alt, name, size = 'md', className = '' }
         src={src}
         alt={alt || name}
         className={`${sizeClasses[size]} rounded-full object-cover ${className}`}
+        style={style}
       />
     );
   }
 
   return (
-    <div className={`${sizeClasses[size]} bg-blue-600 rounded-full flex items-center justify-center ${className}`}>
+    <div 
+      className={`${sizeClasses[size]} bg-blue-600 rounded-full flex items-center justify-center ${className}`}
+      style={style}
+    >
       <span className="text-white font-medium">
         {getInitials(name)}
       </span>
