@@ -5,7 +5,6 @@ import { getUserProfile } from '../../services/userService';
 import { getUserCustomTheme } from '../../services/profileThemeService';
 import type { UserProfile } from '../../services/userService';
 import type { CustomProfileTheme } from '../../types/profileTheme';
-import Avatar from './Avatar';
 import BadgeList from '../user/BadgeList';
 
 interface UserPreviewModalProps {

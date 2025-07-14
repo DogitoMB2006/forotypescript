@@ -53,7 +53,6 @@ const ProfileThemeSelector: FC<ProfileThemeSelectorProps> = ({
 
   const textColor = isLightColor(selectedTheme.accentColor) ? '#000000' : '#FFFFFF';
   const secondaryTextColor = isLightColor(selectedTheme.primaryColor) ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)';
-  const tertiaryTextColor = isLightColor(selectedTheme.primaryColor) ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)';
 
   const getPreviewStyle = () => ({
     background: `linear-gradient(135deg, ${selectedTheme.primaryColor}, ${selectedTheme.accentColor})`
@@ -69,7 +68,6 @@ const ProfileThemeSelector: FC<ProfileThemeSelectorProps> = ({
       </div>
 
       <div className="p-4 sm:p-6 bg-gray-800 rounded-xl border border-gray-700">
-        {/* Vista previa */}
         <div className="mb-6">
           <h4 className="text-sm font-medium text-gray-300 mb-3">Vista Previa del Modal</h4>
           <div
@@ -147,7 +145,6 @@ const ProfileThemeSelector: FC<ProfileThemeSelectorProps> = ({
           </div>
         </div>
 
-        {/* Tabs y controles */}
         <div className="mb-4">
           <div className="flex bg-gray-700 rounded-lg p-1">
             <button
@@ -171,7 +168,6 @@ const ProfileThemeSelector: FC<ProfileThemeSelectorProps> = ({
           </div>
         </div>
 
-        {/* Color Picker */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-sm font-medium text-gray-300">
