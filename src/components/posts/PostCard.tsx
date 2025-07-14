@@ -94,10 +94,13 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
     if (!user) return;
 
     if (!isAuthor) {
-      const hasDeletePermission = await userHasPermission(user.uid, 'delete', 'posts');
-      if (!hasDeletePermission) {
-        setPermissionError('No tienes permisos suficientes para realizar esta acción. Por favor, refresca la página.');
-        return;
+      const isAdmin = user.email === 'dogitomb2022@gmail.com';
+      if (!isAdmin) {
+        const hasDeletePermission = await userHasPermission(user.uid, 'delete', 'posts');
+        if (!hasDeletePermission) {
+          setPermissionError('No tienes permisos suficientes para realizar esta acción. Por favor, refresca la página.');
+          return;
+        }
       }
     }
 
@@ -117,10 +120,13 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
     if (!user) return;
 
     if (!isAuthor) {
-      const hasDeletePermission = await userHasPermission(user.uid, 'delete', 'posts');
-      if (!hasDeletePermission) {
-        setPermissionError('No tienes permisos suficientes para realizar esta acción. Por favor, refresca la página.');
-        return;
+      const isAdmin = user.email === 'dogitomb2022@gmail.com';
+      if (!isAdmin) {
+        const hasDeletePermission = await userHasPermission(user.uid, 'delete', 'posts');
+        if (!hasDeletePermission) {
+          setPermissionError('No tienes permisos suficientes para realizar esta acción. Por favor, refresca la página.');
+          return;
+        }
       }
     }
 

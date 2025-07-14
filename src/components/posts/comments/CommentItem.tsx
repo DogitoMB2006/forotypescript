@@ -91,10 +91,13 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
     if (!user) return;
 
     if (!isAuthor) {
-      const hasDeletePermission = await userHasPermission(user.uid, 'delete', 'comments');
-      if (!hasDeletePermission) {
-        setPermissionError('No tienes permisos suficientes para realizar esta acción. Por favor, refresca la página.');
-        return;
+      const isAdmin = user.email === 'dogitomb2022@gmail.com';
+      if (!isAdmin) {
+        const hasDeletePermission = await userHasPermission(user.uid, 'delete', 'comments');
+        if (!hasDeletePermission) {
+          setPermissionError('No tienes permisos suficientes para realizar esta acción. Por favor, refresca la página.');
+          return;
+        }
       }
     }
 
@@ -111,10 +114,13 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
     if (!user) return;
 
     if (!isAuthor) {
-      const hasDeletePermission = await userHasPermission(user.uid, 'delete', 'comments');
-      if (!hasDeletePermission) {
-        setPermissionError('No tienes permisos suficientes para realizar esta acción. Por favor, refresca la página.');
-        return;
+      const isAdmin = user.email === 'dogitomb2022@gmail.com';
+      if (!isAdmin) {
+        const hasDeletePermission = await userHasPermission(user.uid, 'delete', 'comments');
+        if (!hasDeletePermission) {
+          setPermissionError('No tienes permisos suficientes para realizar esta acción. Por favor, refresca la página.');
+          return;
+        }
       }
     }
 
