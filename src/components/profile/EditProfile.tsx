@@ -3,9 +3,12 @@ import { useState, useRef, useEffect } from 'react';
 import { updateUserProfile, uploadProfileImage, uploadBannerImage, checkUsernameAvailability } from '../../services/userService';
 import type { UserProfile } from '../../services/userService';
 import { getUserBadges, setDefaultBadge } from '../../services/badgeService';
+import { updateUserCustomTheme, getUserCustomTheme } from '../../services/profileThemeService';
 import type { UserBadgeWithDetails } from '../../types/badge';
+import type { CustomProfileTheme } from '../../types/profileTheme';
 import ImageCropModal from '../ui/ImageCropModal';
 import Badge from '../user/Badge';
+import ProfileThemeSelector from './ProfileThemeSelector';
 
 interface EditProfileProps {
   profile: UserProfile;
@@ -19,6 +22,10 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
     username: profile.username || '',
     bio: profile.bio || '',
     defaultBadgeId: (profile as any).defaultBadgeId || ''
+  });
+  const [customTheme, setCustomTheme] = useState<CustomProfileTheme>({
+    primaryColor: '#3B82F6',
+    accentColor: '#60A5FA'
   });
   const [userBadges, setUserBadges] = useState<UserBadgeWithDetails[]>([]);
   const [profileImage, setProfileImage] = useState<File | null>(null);
@@ -46,7 +53,17 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
       }
     };
 
+    const fetchUserTheme = async () => {
+      try {
+        const theme = await getUserCustomTheme(profile.uid);
+        setCustomTheme(theme);
+      } catch (error) {
+        console.error('Error fetching user theme:', error);
+      }
+    };
+
     fetchUserBadges();
+    fetchUserTheme();
   }, [profile.uid]);
 
   const handleUsernameChange = async (newUsername: string) => {
@@ -170,6 +187,8 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
         await setDefaultBadge(profile.uid, formData.defaultBadgeId || null);
       }
 
+      await updateUserCustomTheme(profile.uid, customTheme);
+
       const updatedProfile: UserProfile = {
         ...profile,
         ...updates
@@ -210,7 +229,7 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto max-h-[calc(100vh-200px)] scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500">
           {error && (
             <div className="p-3 bg-red-900/50 border border-red-500 rounded-md text-red-300 text-sm">
               {error}
@@ -436,6 +455,11 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
               </div>
             </div>
           )}
+
+          <ProfileThemeSelector
+            selectedTheme={customTheme}
+            onThemeChange={setCustomTheme}
+          />
 
           <div className="flex items-center space-x-3 pt-4">
             <button

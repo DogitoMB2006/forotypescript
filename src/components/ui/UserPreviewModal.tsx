@@ -2,7 +2,9 @@ import type { FC } from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { getUserProfile } from '../../services/userService';
+import { getUserCustomTheme } from '../../services/profileThemeService';
 import type { UserProfile } from '../../services/userService';
+import type { CustomProfileTheme } from '../../types/profileTheme';
 import Avatar from './Avatar';
 import BadgeList from '../user/BadgeList';
 
@@ -16,6 +18,7 @@ interface UserPreviewModalProps {
 
 const UserPreviewModal: FC<UserPreviewModalProps> = ({ userId, isOpen, onClose, anchorPosition }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userTheme, setUserTheme] = useState<CustomProfileTheme | null>(null);
   const [loading, setLoading] = useState(true);
   const modalRef = useRef<HTMLDivElement>(null);
   const initialScrollY = useRef<number>(0);
@@ -25,8 +28,12 @@ const UserPreviewModal: FC<UserPreviewModalProps> = ({ userId, isOpen, onClose, 
       initialScrollY.current = window.scrollY;
       const fetchProfile = async () => {
         try {
-          const profile = await getUserProfile(userId);
+          const [profile, theme] = await Promise.all([
+            getUserProfile(userId),
+            getUserCustomTheme(userId)
+          ]);
           setUserProfile(profile);
+          setUserTheme(theme);
         } catch (error) {
           console.error('Error fetching user profile:', error);
         } finally {
@@ -136,15 +143,19 @@ const UserPreviewModal: FC<UserPreviewModalProps> = ({ userId, isOpen, onClose, 
       <div className="bg-gray-900 border border-gray-700 rounded-xl shadow-2xl w-80 overflow-hidden animate-in fade-in-0 slide-in-from-top-2 duration-200">
         <div className="relative">
           <div 
-            className="h-20 bg-gradient-to-r from-blue-600 to-purple-600 relative"
+            className="h-20 relative"
             style={{
-              backgroundImage: userProfile.bannerImageUrl ? `url(${userProfile.bannerImageUrl})` : undefined,
+              background: userProfile.bannerImageUrl 
+                ? `url(${userProfile.bannerImageUrl})` 
+                : userTheme 
+                  ? `linear-gradient(135deg, ${userTheme.primaryColor}, ${userTheme.accentColor})`
+                  : 'linear-gradient(135deg, #3B82F6, #8B5CF6)',
               backgroundSize: 'cover',
               backgroundPosition: 'center'
             }}
           >
             {!userProfile.bannerImageUrl && (
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 opacity-80"></div>
+              <div className="absolute inset-0 bg-black/10"></div>
             )}
           </div>
           
@@ -153,7 +164,10 @@ const UserPreviewModal: FC<UserPreviewModalProps> = ({ userId, isOpen, onClose, 
               src={userProfile.profileImageUrl}
               name={userProfile.displayName}
               size="xl"
-              className="border-4 border-gray-900 shadow-xl ring-2 ring-gray-800"
+              className="border-4 border-gray-900 shadow-xl ring-2"
+              style={{
+                borderColor: userTheme?.primaryColor || '#374151'
+              }}
             />
           </div>
         </div>
@@ -184,7 +198,10 @@ const UserPreviewModal: FC<UserPreviewModalProps> = ({ userId, isOpen, onClose, 
             <Link
               to={`/perfil/${userProfile.uid}`}
               onClick={onClose}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-center py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105"
+              className="flex-1 text-center py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 text-white"
+              style={{
+                backgroundColor: userTheme?.accentColor || '#3B82F6'
+              }}
             >
               Ver perfil completo
             </Link>
