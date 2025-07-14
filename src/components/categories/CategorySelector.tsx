@@ -1,6 +1,5 @@
 import type { FC } from 'react';
 import { getAllCategories } from '../../services/categoryService';
-import type { Category } from '../../types/category';
 
 interface CategorySelectorProps {
   selectedCategory: string | null;
