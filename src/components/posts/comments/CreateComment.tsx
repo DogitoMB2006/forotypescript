@@ -162,28 +162,33 @@ const CreateComment: FC<CreateCommentProps> = ({ postId, onCommentCreated }) => 
           <div className="flex items-center justify-between mt-2 sm:mt-3 gap-2">
             <div className="flex items-center space-x-2">
               <span className="text-xs text-gray-500 flex-shrink-0">{content.length}/500</span>
-              
+            </div>
+            
+            <div className="flex items-center space-x-2">
               <button
                 type="button"
                 onClick={() => setShowAudioRecorder(true)}
-                className="flex items-center space-x-1 text-blue-400 hover:text-blue-300 transition-colors duration-200 p-1 rounded"
+                className="flex items-center space-x-2 text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 transition-all duration-200 p-2 sm:p-3 rounded-lg border border-blue-500/30 hover:border-blue-400/50"
                 title="Enviar nota de voz"
               >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2c1.1 0 2 .9 2 2v6c0 1.1-.9 2-2 2s-2-.9-2-2V4c0-1.1.9-2 2-2z"/>
                   <path d="M19 10v2c0 3.87-3.13 7-7 7s-7-3.13-7-7v-2h2v2c0 2.76 2.24 5 5 5s5-2.24 5-5v-2h2z"/>
                 </svg>
-                <span className="text-xs hidden sm:inline">Voz</span>
+                <span className="text-sm sm:text-base font-medium">Voz</span>
+              </button>
+              
+              <button
+                type="submit"
+                disabled={!content.trim() || isSubmitting}
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-2 sm:px-6 sm:py-3 rounded-lg text-sm sm:text-base font-medium transition-colors duration-200 flex-shrink-0"
+              >
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                <span>{isSubmitting ? 'Enviando...' : 'Comentar'}</span>
               </button>
             </div>
-            
-            <button
-              type="submit"
-              disabled={!content.trim() || isSubmitting}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors duration-200 flex-shrink-0"
-            >
-              {isSubmitting ? 'Enviando...' : 'Comentar'}
-            </button>
           </div>
         </form>
       </div>

@@ -120,7 +120,7 @@ const audioBufferToBlob = async (audioBuffer: AudioBuffer): Promise<Blob> => {
   writeString(36, 'data');
   view.setUint32(40, length, true);
   
-  // Convert float samples to 16-bit PCM
+
   let offset = 44;
   for (let i = 0; i < audioBuffer.length; i++) {
     for (let channel = 0; channel < numberOfChannels; channel++) {

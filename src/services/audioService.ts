@@ -12,11 +12,11 @@ export const uploadAudioFile = async (audioBlob: Blob, userId: string): Promise<
       throw new Error('El archivo de audio está vacío');
     }
     
-    // Subir directamente sin procesamiento
+    
     const fileName = `voice_note_${Date.now()}.webm`;
     const audioRef = ref(storage, `audio/${userId}/${fileName}`);
     
-    // Subir directamente el blob original
+  
     const snapshot = await uploadBytes(audioRef, audioBlob, {
       contentType: audioBlob.type || 'audio/webm'
     });
