@@ -9,7 +9,7 @@ interface EditCommentProps {
 }
 
 const EditComment: FC<EditCommentProps> = ({ comment, onSave, onCancel }) => {
-  const [content, setContent] = useState(comment.content);
+  const [content, setContent] = useState(comment.content || '');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -69,7 +69,7 @@ const EditComment: FC<EditCommentProps> = ({ comment, onSave, onCancel }) => {
               </button>
               <button
                 type="submit"
-                disabled={!content.trim() || isSaving || content.trim() === comment.content}
+                disabled={!content.trim() || isSaving || content.trim() === (comment.content || '')}
                 className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-4 py-1 rounded text-sm font-medium transition-colors duration-200"
               >
                 {isSaving ? 'Guardando...' : 'Guardar'}

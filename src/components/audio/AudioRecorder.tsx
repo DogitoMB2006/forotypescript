@@ -15,7 +15,7 @@ const AudioRecorder: FC<AudioRecorderProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const [duration, setDuration] = useState(0);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -35,19 +35,16 @@ const AudioRecorder: FC<AudioRecorderProps> = ({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000,
-          channelCount: 1,
-          volume: 1.0
+          autoGainControl: true
         } 
       });
       
-      // Detectar el mejor formato soportado
+      // Detectar el mejor formato soportado con alta calidad
       let mimeType = '';
       const supportedTypes = [
         'audio/webm;codecs=opus',
-        'audio/webm',
         'audio/mp4;codecs=mp4a.40.2',
+        'audio/webm',
         'audio/mp4',
         'audio/ogg;codecs=opus'
       ];
@@ -115,8 +112,7 @@ const AudioRecorder: FC<AudioRecorderProps> = ({
       };
       
       setMediaRecorder(recorder);
-      setAudioChunks(chunks);
-      recorder.start(500);
+      recorder.start(1000);
       setIsRecording(true);
       setDuration(0);
       
@@ -175,31 +171,34 @@ const AudioRecorder: FC<AudioRecorderProps> = ({
             }`}
           >
             {isRecording ? (
-              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M6 6h4v12H6zm8 0h4v12h-4z"/>
+              <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 6h12v12H6z"/>
               </svg>
             ) : (
-              <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2c1.1 0 2 .9 2 2v6c0 1.1-.9 2-2 2s-2-.9-2-2V4c0-1.1.9-2 2-2zm5.3 6.7c.4-.4 1-.4 1.4 0 .4.4.4 1 0 1.4-1.27 1.27-2.9 2.28-4.8 2.85l.9.9c.4.4.4 1 0 1.4-.2.2-.4.3-.7.3s-.5-.1-.7-.3l-2.1-2.1c-.4-.4-.4-1 0-1.4l2.1-2.1c.4-.4 1-.4 1.4 0 .4.4.4 1 0 1.4l-.9.9c1.35-.41 2.58-1.17 3.6-2.19zM11 14h2v4h-2v-4z"/>
+              <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2c1.1 0 2 .9 2 2v6c0 1.1-.9 2-2 2s-2-.9-2-2V4c0-1.1.9-2 2-2z"/>
+                <path d="M19 10v2c0 3.87-3.13 7-7 7s-7-3.13-7-7v-2h2v2c0 2.76 2.24 5 5 5s5-2.24 5-5v-2h2z"/>
               </svg>
             )}
           </div>
-          
-          {isRecording && (
-            <div className="absolute inset-0 rounded-full border-4 border-red-300 animate-ping"></div>
-          )}
         </div>
       </div>
 
-      <div className="text-center mb-4">
-        <div className="text-white text-xl sm:text-2xl font-mono mb-2">
-          {formatTime(duration)}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-gray-300 text-sm font-medium">
+            {formatTime(duration)} / {formatTime(maxDuration)}
+          </p>
+          <p className="text-gray-500 text-xs">
+            {Math.max(0, maxDuration - duration)}s restantes
+          </p>
         </div>
         
-        <div className="w-full bg-gray-700 rounded-full h-2 mb-2">
+        <div className="w-full bg-gray-700 rounded-full h-2">
           <div 
             className={`h-2 rounded-full transition-all duration-300 ${
-              progressPercentage > 80 ? 'bg-red-500' : progressPercentage > 60 ? 'bg-yellow-500' : 'bg-blue-500'
+              duration >= maxDuration ? 'bg-red-500' : 
+              duration > maxDuration * 0.8 ? 'bg-yellow-500' : 'bg-blue-500'
             }`}
             style={{ width: `${Math.min(progressPercentage, 100)}%` }}
           ></div>

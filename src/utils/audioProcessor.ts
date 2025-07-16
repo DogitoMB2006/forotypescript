@@ -6,14 +6,12 @@ export const processAudioForBetterQuality = async (audioBlob: Blob): Promise<Blo
     });
     
     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-    
-    // Normalizar el audio para mejor volumen
+
     const normalizedBuffer = normalizeAudio(audioBuffer, audioContext);
-    
-    // Aplicar compresión dinámica
+
     const compressedBuffer = await applyDynamicCompression(normalizedBuffer, audioContext);
     
-    // Convertir de vuelta a blob
+
     const processedBlob = await audioBufferToBlob(compressedBuffer);
     
     audioContext.close();
@@ -24,10 +22,14 @@ export const processAudioForBetterQuality = async (audioBlob: Blob): Promise<Blo
   }
 };
 
-const normalizeAudio = (audioBuffer: AudioBuffer, audioContext: AudioContext): AudioBuffer => {
+const normalizeAudio = (audioBuffer: AudioBuffer, _audioContext: AudioContext): AudioBuffer => {
   const numberOfChannels = audioBuffer.numberOfChannels;
   const length = audioBuffer.length;
   const sampleRate = audioBuffer.sampleRate;
+  
+  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
+    sampleRate: 48000
+  });
   
   const normalizedBuffer = audioContext.createBuffer(numberOfChannels, length, sampleRate);
   
@@ -35,7 +37,7 @@ const normalizeAudio = (audioBuffer: AudioBuffer, audioContext: AudioContext): A
     const inputData = audioBuffer.getChannelData(channel);
     const outputData = normalizedBuffer.getChannelData(channel);
     
-    // Encontrar el pico máximo
+
     let maxPeak = 0;
     for (let i = 0; i < length; i++) {
       const absSample = Math.abs(inputData[i]);
@@ -43,8 +45,7 @@ const normalizeAudio = (audioBuffer: AudioBuffer, audioContext: AudioContext): A
         maxPeak = absSample;
       }
     }
-    
-    // Normalizar si hay contenido de audio
+
     const gain = maxPeak > 0 ? 0.95 / maxPeak : 1;
     for (let i = 0; i < length; i++) {
       outputData[i] = inputData[i] * gain;
@@ -54,36 +55,36 @@ const normalizeAudio = (audioBuffer: AudioBuffer, audioContext: AudioContext): A
   return normalizedBuffer;
 };
 
-const applyDynamicCompression = async (audioBuffer: AudioBuffer, audioContext: AudioContext): Promise<AudioBuffer> => {
+const applyDynamicCompression = async (audioBuffer: AudioBuffer, _audioContext: AudioContext): Promise<AudioBuffer> => {
   const numberOfChannels = audioBuffer.numberOfChannels;
   const length = audioBuffer.length;
   const sampleRate = audioBuffer.sampleRate;
   
-  // Crear un OfflineAudioContext para procesamiento
+ 
   const offlineContext = new OfflineAudioContext(numberOfChannels, length, sampleRate);
   
-  // Crear nodos de audio
+
   const source = offlineContext.createBufferSource();
   const compressor = offlineContext.createDynamicsCompressor();
   const gainNode = offlineContext.createGain();
   
-  // Configurar el compresor
+
   compressor.threshold.setValueAtTime(-18, offlineContext.currentTime);
   compressor.knee.setValueAtTime(6, offlineContext.currentTime);
   compressor.ratio.setValueAtTime(4, offlineContext.currentTime);
   compressor.attack.setValueAtTime(0.003, offlineContext.currentTime);
   compressor.release.setValueAtTime(0.1, offlineContext.currentTime);
   
-  // Configurar ganancia de salida
+
   gainNode.gain.setValueAtTime(1.2, offlineContext.currentTime);
   
-  // Conectar nodos
+
   source.buffer = audioBuffer;
   source.connect(compressor);
   compressor.connect(gainNode);
   gainNode.connect(offlineContext.destination);
   
-  // Procesar audio
+
   source.start(0);
   const renderedBuffer = await offlineContext.startRendering();
   
