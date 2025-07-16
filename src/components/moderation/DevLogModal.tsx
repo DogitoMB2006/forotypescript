@@ -26,7 +26,6 @@ const DevLogModal: FC = () => {
           setDevLog(newDevLog);
           setIsOpen(true);
           
-        
           const profile = await getUserProfile(newDevLog.authorId);
           setAuthorProfile(profile);
         }
@@ -50,6 +49,8 @@ const DevLogModal: FC = () => {
   };
 
   const handleAuthorClick = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
     const rect = event.currentTarget.getBoundingClientRect();
     setUserPreviewPosition({
       x: rect.left + rect.width / 2,
@@ -86,7 +87,6 @@ const DevLogModal: FC = () => {
     <>
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 z-50">
         <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl w-full max-w-4xl max-h-[95vh] overflow-hidden shadow-2xl border border-gray-700/50">
-    
           <div className="sticky top-0 bg-gradient-to-r from-gray-900 to-gray-800 border-b border-gray-700/50 p-4 sm:p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3 sm:space-x-4">
@@ -101,7 +101,6 @@ const DevLogModal: FC = () => {
                 </div>
               </div>
               
-         
               <div className="flex items-center space-x-3">
                 {authorProfile && (
                   <button
@@ -131,10 +130,8 @@ const DevLogModal: FC = () => {
             </div>
           </div>
 
-     
           <div className="overflow-y-auto max-h-[calc(95vh-140px)]">
             <div className="p-4 sm:p-6 space-y-6">
-           
               {devLog.images.length > 0 && (
                 <div className="w-full">
                   <div className="relative group">
@@ -151,52 +148,36 @@ const DevLogModal: FC = () => {
                       <>
                         <button
                           onClick={prevImage}
-                          className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 sm:p-3 rounded-full transition-all duration-200 opacity-0 group-hover:opacity-100 backdrop-blur-sm"
+                          className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all duration-200 opacity-0 group-hover:opacity-100 backdrop-blur-sm"
                         >
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                           </svg>
                         </button>
                         
                         <button
                           onClick={nextImage}
-                          className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white p-2 sm:p-3 rounded-full transition-all duration-200 opacity-0 group-hover:opacity-100 backdrop-blur-sm"
+                          className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-all duration-200 opacity-0 group-hover:opacity-100 backdrop-blur-sm"
                         >
-                          <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
                         </button>
                         
-                    
-                        <div className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-black/60 text-white text-xs sm:text-sm px-2 sm:px-3 py-1 rounded-full backdrop-blur-sm">
+                        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-sm">
                           {currentImageIndex + 1} / {devLog.images.length}
-                        </div>
-                  
-                        <div className="absolute bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                          {devLog.images.map((_, index) => (
-                            <button
-                              key={index}
-                              onClick={() => setCurrentImageIndex(index)}
-                              className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full transition-all duration-200 ${
-                                index === currentImageIndex 
-                                  ? 'bg-white scale-110' 
-                                  : 'bg-white/50 hover:bg-white/75'
-                              }`}
-                            />
-                          ))}
                         </div>
                       </>
                     )}
                   </div>
                   
-                
                   {devLog.images.length > 1 && (
-                    <div className="flex space-x-2 mt-3 overflow-x-auto pb-2 sm:hidden">
+                    <div className="flex justify-center mt-4 space-x-2">
                       {devLog.images.map((image, index) => (
                         <button
                           key={index}
                           onClick={() => setCurrentImageIndex(index)}
-                          className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
+                          className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
                             index === currentImageIndex
                               ? 'border-red-500 opacity-100'
                               : 'border-gray-600 opacity-60 hover:opacity-80'
@@ -214,7 +195,6 @@ const DevLogModal: FC = () => {
                 </div>
               )}
 
-         
               <div className="prose prose-invert max-w-none">
                 <div className="text-gray-300 whitespace-pre-wrap leading-relaxed text-base sm:text-lg">
                   {devLog.content}
@@ -223,7 +203,6 @@ const DevLogModal: FC = () => {
             </div>
           </div>
 
-     
           <div className="sticky bottom-0 bg-gradient-to-r from-gray-900 to-gray-800 border-t border-gray-700/50 p-4 sm:p-6">
             <div className="flex justify-end">
               <button
@@ -240,8 +219,7 @@ const DevLogModal: FC = () => {
         </div>
       </div>
 
-   
-      {showUserPreview && authorProfile && (
+      {showUserPreview && authorProfile && devLog && (
         <UserPreviewModal
           userId={devLog.authorId}
           username={authorProfile.displayName}

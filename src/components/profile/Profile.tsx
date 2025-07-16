@@ -7,6 +7,7 @@ import ProfileHeader from './ProfileHeader';
 import ProfileBio from './ProfileBio';
 import ProfilePosts from './ProfilePosts';
 import EditProfile from './EditProfile';
+import ErrorBoundary from '../ui/ErrorBoundary';
 
 interface ProfileProps {
   userId?: string;
@@ -31,6 +32,7 @@ const Profile: FC<ProfileProps> = ({ userId }) => {
       }
 
       try {
+        setError(''); // Limpiar error previo
         if (isOwnProfile && currentUserProfile) {
           setProfile(currentUserProfile);
         } else {
@@ -53,8 +55,13 @@ const Profile: FC<ProfileProps> = ({ userId }) => {
   }, [targetUserId, isOwnProfile, currentUserProfile, initialLoad]);
 
   const handleProfileUpdated = (updatedProfile: UserProfile) => {
-    setProfile(updatedProfile);
-    setIsEditing(false);
+    try {
+      setProfile(updatedProfile);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      setError('Error al actualizar el perfil');
+    }
   };
 
   if (loading) {
@@ -80,6 +87,12 @@ const Profile: FC<ProfileProps> = ({ userId }) => {
       <div className="max-w-4xl mx-auto">
         <div className="bg-red-900/50 border border-red-500 rounded-lg p-8 text-center">
           <h2 className="text-2xl font-bold text-red-300 mb-4">{error}</h2>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            Recargar página
+          </button>
         </div>
       </div>
     );
@@ -90,6 +103,12 @@ const Profile: FC<ProfileProps> = ({ userId }) => {
       <div className="max-w-4xl mx-auto">
         <div className="bg-gray-900 border border-gray-800 rounded-lg p-8 text-center">
           <h2 className="text-2xl font-bold text-gray-300 mb-4">Perfil no encontrado</h2>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            Recargar página
+          </button>
         </div>
       </div>
     );
@@ -97,32 +116,36 @@ const Profile: FC<ProfileProps> = ({ userId }) => {
 
   if (isEditing) {
     return (
-      <EditProfile
-        profile={profile}
-        onProfileUpdated={handleProfileUpdated}
-        onCancel={() => setIsEditing(false)}
-      />
+      <ErrorBoundary>
+        <EditProfile
+          profile={profile}
+          onProfileUpdated={handleProfileUpdated}
+          onCancel={() => setIsEditing(false)}
+        />
+      </ErrorBoundary>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <ProfileHeader 
-        profile={profile}
-        isOwnProfile={isOwnProfile}
-        onEdit={() => setIsEditing(true)}
-      />
-      
-      <ProfileBio 
-        profile={profile}
-        isOwnProfile={isOwnProfile}
-      />
-      
-      <ProfilePosts 
-        userId={profile.uid}
-        username={profile.username}
-      />
-    </div>
+    <ErrorBoundary>
+      <div className="max-w-4xl mx-auto space-y-6">
+        <ProfileHeader 
+          profile={profile}
+          isOwnProfile={isOwnProfile}
+          onEdit={() => setIsEditing(true)}
+        />
+        
+        <ProfileBio 
+          profile={profile}
+          isOwnProfile={isOwnProfile}
+        />
+        
+        <ProfilePosts 
+          userId={profile.uid}
+          username={profile.username}
+        />
+      </div>
+    </ErrorBoundary>
   );
 };
 
