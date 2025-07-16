@@ -6,8 +6,8 @@ import {
   limit, 
   getDocs, 
   doc, 
-  updateDoc, 
-  arrayUnion,
+  //updateDoc, 
+  //arrayUnion,
   getDoc,
   setDoc
 } from 'firebase/firestore';
