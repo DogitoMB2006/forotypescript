@@ -1,15 +1,15 @@
 import type { FC } from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { updateUserProfile, uploadProfileImage, uploadBannerImage, checkUsernameAvailability } from '../../services/userService';
-import { getUserBadges, setDefaultBadge } from '../../services/badgeService';
+import { setDefaultBadge } from '../../services/badgeService'; // ✅ Solo se deja este
 import { getUserCustomTheme, updateUserCustomTheme } from '../../services/profileThemeService';
 import type { UserProfile } from '../../services/userService';
-import type { UserBadgeWithDetails } from '../../types/badge';
 import type { CustomProfileTheme } from '../../types/profileTheme';
 import BadgeList from '../user/BadgeList';
 import ImageCropModal from '../ui/ImageCropModal';
 import BannerUploadModal from './BannerUploadModal';
 import ThemeCustomizer from './ThemeCustomizer';
+
 
 interface EditProfileProps {
   profile: UserProfile;
@@ -28,7 +28,7 @@ const EditProfile: FC<EditProfileProps> = ({ profile, onProfileUpdated, onCancel
   const [error, setError] = useState('');
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
   const [checkingUsername, setCheckingUsername] = useState(false);
-  const [userBadges, setUserBadges] = useState<Badge[]>([]);
+  //const [userBadges, setUserBadges] = useState<Badge[]>([]);
   const [customTheme, setCustomTheme] = useState<CustomProfileTheme>({
     primaryColor: '#3B82F6',
     accentColor: '#60A5FA'
