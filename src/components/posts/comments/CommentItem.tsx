@@ -13,6 +13,7 @@ import Avatar from '../../ui/Avatar';
 import ClickableUsername from '../../ui/ClickableUsername';
 import DefaultBadge from '../../user/DefaultBadge';
 import UserRoleDisplay from '../../user/UserRoleDisplay';
+import AudioPlayer from '../../audio/AudioPlayer';
 
 interface CommentItemProps {
   comment: Comment;
@@ -35,7 +36,7 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
   
   const isAuthor = user?.uid === comment.authorId;
   const canDeleteComment = isAuthor || hasPermission('delete', 'comments');
-  const canEditComment = isAuthor;
+  const canEditComment = isAuthor && !comment.audioUrl;
 
   useEffect(() => {
     const fetchAuthorProfile = async () => {
@@ -151,7 +152,7 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
     return name.substring(0, maxLength) + '...';
   };
 
-  const isContentLong = comment.content.length > 200;
+  const isContentLong = comment.content && comment.content.length > 200;
   const shouldTruncate = isContentLong && !showFullContent;
 
   if (isEditing) {
@@ -270,37 +271,43 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
               </div>
             </div>
             
-            <div className="text-gray-200 text-sm sm:text-base leading-relaxed mb-3">
-              <div className="break-words overflow-wrap-anywhere">
-                {shouldTruncate ? (
-                  <>
-                    <span className="whitespace-pre-wrap">
-                      {processContent(comment.content.substring(0, 200))}...
-                    </span>
-                    <button
-                      onClick={() => setShowFullContent(true)}
-                      className="text-blue-400 hover:text-blue-300 text-sm ml-1 font-medium"
-                    >
-                      Ver más
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <span className="whitespace-pre-wrap">
-                      {processContent(comment.content)}
-                    </span>
-                    {isContentLong && showFullContent && (
+            {comment.audioUrl ? (
+              <div className="mb-3">
+                <AudioPlayer audioUrl={comment.audioUrl} />
+              </div>
+            ) : comment.content && (
+              <div className="text-gray-200 text-sm sm:text-base leading-relaxed mb-3">
+                <div className="break-words overflow-wrap-anywhere">
+                  {shouldTruncate ? (
+                    <>
+                      <span className="whitespace-pre-wrap">
+                        {processContent(comment.content.substring(0, 200))}...
+                      </span>
                       <button
-                        onClick={() => setShowFullContent(false)}
+                        onClick={() => setShowFullContent(true)}
                         className="text-blue-400 hover:text-blue-300 text-sm ml-1 font-medium"
                       >
-                        Ver menos
+                        Ver más
                       </button>
-                    )}
-                  </>
-                )}
+                    </>
+                  ) : (
+                    <>
+                      <span className="whitespace-pre-wrap">
+                        {processContent(comment.content)}
+                      </span>
+                      {isContentLong && showFullContent && (
+                        <button
+                          onClick={() => setShowFullContent(false)}
+                          className="text-blue-400 hover:text-blue-300 text-sm ml-1 font-medium"
+                        >
+                          Ver menos
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
             
             <div className="flex items-center space-x-3 sm:space-x-4">
               <button className="flex items-center space-x-1 text-gray-500 hover:text-red-400 transition-colors duration-200 py-1 px-2 rounded-lg hover:bg-red-900/20">

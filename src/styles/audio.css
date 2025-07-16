@@ -1,0 +1,413 @@
+/* Audio recorder animations */
+@keyframes pulse-record {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.recording-pulse {
+  animation: pulse-record 1.5s ease-in-out infinite;
+}
+
+/* Audio waveform effect */
+@keyframes wave {
+  0%, 100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(1.5);
+  }
+}
+
+.audio-wave {
+  animation: wave 1s ease-in-out infinite;
+}
+
+.audio-wave:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.audio-wave:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.audio-wave:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+.audio-wave:nth-child(5) {
+  animation-delay: 0.4s;
+}
+
+/* Progress bar for audio player */
+.audio-progress {
+  transition: width 0.1s ease-out;
+}
+
+/* Audio button hover effects */
+.audio-button {
+  transition: all 0.2s ease-in-out;
+}
+
+.audio-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.audio-button:active {
+  transform: scale(0.98);
+}
+
+/* Volume slider styling */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #3b82f6;
+  cursor: pointer;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Enhanced audio quality styles */
+.audio-enhanced {
+  filter: contrast(1.1) brightness(1.05);
+}
+
+.audio-high-quality {
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .audio-recorder {
+    padding: 0.75rem;
+  }
+  
+  .audio-controls {
+    gap: 0.5rem;
+  }
+  
+  .audio-timer {
+    font-size: 1.25rem;
+  }
+  
+  input[type="range"]::-webkit-slider-thumb {
+    width: 20px;
+    height: 20px;
+  }
+  
+  input[type="range"]::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* Dark mode audio elements */
+.audio-container {
+  background: rgba(31, 41, 55, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+.audio-container:hover {
+  border-color: rgba(96, 165, 250, 0.5);
+  background: rgba(31, 41, 55, 0.9);
+}
+
+/* Recording indicator */
+.recording-indicator {
+  position: relative;
+  overflow: hidden;
+}
+
+.recording-indicator::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(239, 68, 68, 0.4),
+    transparent
+  );
+  animation: shine 2s infinite;
+}
+
+@keyframes shine {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Audio visualization bars */
+.audio-bars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 20px;
+}
+
+.audio-bar {
+  width: 3px;
+  background: currentColor;
+  border-radius: 1px;
+  animation: wave 1s ease-in-out infinite;
+}
+
+/* Responsive audio controls */
+@media (max-width: 768px) {
+  .audio-recorder-modal {
+    margin: 0.5rem;
+    border-radius: 0.75rem;
+  }
+  
+  .audio-recorder-content {
+    padding: 1rem;
+  }
+}
+
+/* Audio loading states */
+.audio-loading {
+  background: linear-gradient(
+    90deg,
+    rgba(75, 85, 99, 0.3) 25%,
+    rgba(107, 114, 128, 0.5) 50%,
+    rgba(75, 85, 99, 0.3) 75%
+  );
+  background-size: 200% 100%;
+  animation: audio-loading 1.5s infinite;
+}
+
+@keyframes audio-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Audio quality improvements */
+.audio-player-enhanced {
+  filter: contrast(1.1) saturate(1.1);
+}
+
+.audio-compressor {
+  /* CSS for audio dynamic range compression effect */
+  transition: all 0.1s ease-out;
+}
+
+/* Audio gain boost visual indicator */
+.audio-boost-indicator {
+  background: linear-gradient(45deg, #10b981, #3b82f6);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+}/* Audio recorder animations */
+@keyframes pulse-record {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
+}
+
+.recording-pulse {
+  animation: pulse-record 1.5s ease-in-out infinite;
+}
+
+/* Audio waveform effect */
+@keyframes wave {
+  0%, 100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(1.5);
+  }
+}
+
+.audio-wave {
+  animation: wave 1s ease-in-out infinite;
+}
+
+.audio-wave:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.audio-wave:nth-child(3) {
+  animation-delay: 0.2s;
+}
+
+.audio-wave:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+.audio-wave:nth-child(5) {
+  animation-delay: 0.4s;
+}
+
+/* Progress bar for audio player */
+.audio-progress {
+  transition: width 0.1s ease-out;
+}
+
+/* Audio button hover effects */
+.audio-button {
+  transition: all 0.2s ease-in-out;
+}
+
+.audio-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.audio-button:active {
+  transform: scale(0.98);
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .audio-recorder {
+    padding: 0.75rem;
+  }
+  
+  .audio-controls {
+    gap: 0.5rem;
+  }
+  
+  .audio-timer {
+    font-size: 1.25rem;
+  }
+}
+
+/* Dark mode audio elements */
+.audio-container {
+  background: rgba(31, 41, 55, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(75, 85, 99, 0.3);
+}
+
+.audio-container:hover {
+  border-color: rgba(96, 165, 250, 0.5);
+  background: rgba(31, 41, 55, 0.9);
+}
+
+/* Recording indicator */
+.recording-indicator {
+  position: relative;
+  overflow: hidden;
+}
+
+.recording-indicator::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(239, 68, 68, 0.4),
+    transparent
+  );
+  animation: shine 2s infinite;
+}
+
+@keyframes shine {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Audio visualization bars */
+.audio-bars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 20px;
+}
+
+.audio-bar {
+  width: 3px;
+  background: currentColor;
+  border-radius: 1px;
+  animation: wave 1s ease-in-out infinite;
+}
+
+/* Responsive audio controls */
+@media (max-width: 768px) {
+  .audio-recorder-modal {
+    margin: 0.5rem;
+    border-radius: 0.75rem;
+  }
+  
+  .audio-recorder-content {
+    padding: 1rem;
+  }
+}
+
+/* Audio loading states */
+.audio-loading {
+  background: linear-gradient(
+    90deg,
+    rgba(75, 85, 99, 0.3) 25%,
+    rgba(107, 114, 128, 0.5) 50%,
+    rgba(75, 85, 99, 0.3) 75%
+  );
+  background-size: 200% 100%;
+  animation: audio-loading 1.5s infinite;
+}
+
+@keyframes audio-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

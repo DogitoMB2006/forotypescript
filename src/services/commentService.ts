@@ -1,9 +1,12 @@
 import { collection, addDoc, serverTimestamp, query, orderBy, getDocs, doc, deleteDoc, updateDoc, where, getDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { createNotification } from './notificationService';
+import { deleteAudioFile } from './audioService';
 
 export interface CreateCommentData {
-  content: string;
+  content?: string;
+  audioUrl?: string;
+  audioDuration?: number;
   postId: string;
   authorId: string;
   authorUsername: string;
@@ -14,7 +17,9 @@ export interface CreateCommentData {
 
 export interface Comment {
   id: string;
-  content: string;
+  content?: string;
+  audioUrl?: string;
+  audioDuration?: number;
   postId: string;
   authorId: string;
   authorUsername: string;
@@ -31,7 +36,9 @@ export interface Comment {
 export const createComment = async (commentData: CreateCommentData) => {
   try {
     const docRef = await addDoc(collection(db, 'comments'), {
-      content: commentData.content,
+      content: commentData.content || null,
+      audioUrl: commentData.audioUrl || null,
+      audioDuration: commentData.audioDuration || null,
       postId: commentData.postId,
       authorId: commentData.authorId,
       authorUsername: commentData.authorUsername,
@@ -63,7 +70,7 @@ export const createComment = async (commentData: CreateCommentData) => {
             postId: commentData.postId,
             commentId: docRef.id,
             parentCommentId: commentData.parentId,
-            content: commentData.content
+            content: commentData.content || '[Nota de voz]'
           };
 
           if (userData?.profileImageUrl) {
@@ -88,7 +95,7 @@ export const createComment = async (commentData: CreateCommentData) => {
             triggeredByDisplayName: commentData.authorDisplayName,
             postId: commentData.postId,
             commentId: docRef.id,
-            content: commentData.content
+            content: commentData.content || '[Nota de voz]'
           };
 
           if (userData?.profileImageUrl) {
@@ -174,6 +181,15 @@ export const updateComment = async (commentId: string, content: string) => {
 
 export const deleteComment = async (commentId: string) => {
   try {
+    const commentDoc = await getDoc(doc(db, 'comments', commentId));
+    if (commentDoc.exists()) {
+      const commentData = commentDoc.data();
+      
+      if (commentData.audioUrl) {
+        await deleteAudioFile(commentData.audioUrl);
+      }
+    }
+    
     await deleteDoc(doc(db, 'comments', commentId));
   } catch (error) {
     console.error('Error deleting comment:', error);
