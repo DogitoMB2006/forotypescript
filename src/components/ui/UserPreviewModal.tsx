@@ -133,11 +133,12 @@ const UserPreviewModal: FC<UserPreviewModalProps> = ({
           <div
             className="h-32"
             style={{
-              background: userProfile.bannerImageUrl
+              backgroundImage: userProfile.bannerImageUrl
                 ? `url(${userProfile.bannerImageUrl})`
                 : `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
               backgroundSize: 'cover',
-              backgroundPosition: 'center'
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat'
             }}
           />
           <div className="px-4 pt-2">

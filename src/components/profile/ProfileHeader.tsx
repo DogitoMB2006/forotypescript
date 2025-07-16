@@ -54,11 +54,12 @@ const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }
       <div
         className="relative h-64 sm:h-80 md:h-96 bg-gradient-to-br from-blue-600 to-purple-600 overflow-hidden"
         style={{
-          background: profile.bannerImageUrl
+          backgroundImage: profile.bannerImageUrl
             ? `url(${profile.bannerImageUrl})`
             : `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
           backgroundSize: 'cover',
-          backgroundPosition: 'center'
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
         }}
       >
         <div className="absolute inset-0 bg-black/20" />
