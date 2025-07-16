@@ -43,12 +43,29 @@ const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }
 
   const primaryColor = userTheme?.primaryColor || '#3B82F6';
   const accentColor = userTheme?.accentColor || '#60A5FA';
+  const isLightColor = (hex: string): boolean => {
+  const rgb = parseInt(hex.slice(1), 16);
+  const r = (rgb >> 16) & 0xff;
+  const g = (rgb >> 8) & 0xff;
+  const b = (rgb >> 0) & 0xff;
+  const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return luma > 128;
+};
 
+const textColor = isLightColor(accentColor) ? '#000000' : '#FFFFFF';
+const secondaryTextColor = isLightColor(primaryColor) ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)';
+const tertiaryTextColor = isLightColor(primaryColor) ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)';
+
+
+  
   const getProfileImageStyle = () => ({
     border: `4px solid ${primaryColor}`,
     boxShadow: `0 0 0 2px ${accentColor}40`
+
   });
 
+
+  
   return (
     <div className="relative">
       <div
@@ -88,7 +105,14 @@ const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }
         </div>
       </div>
       
-      <div className="bg-gray-900 px-6 pt-20 pb-6">
+      <div
+  className="px-6 pt-20 pb-6"
+  style={{
+    backgroundColor: primaryColor,
+    backgroundImage: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
+    color: textColor
+  }}
+>
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-3 mb-2">
@@ -99,12 +123,14 @@ const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }
               </h1>
               <UserRoleDisplay userId={profile.uid} size="md" />
             </div>
-            <p className="mb-2 text-gray-300">
-              @{profile.username}
-            </p>
-            <p className="text-sm mb-4 text-gray-400">
-              Se unió en {formatDate(profile.createdAt)}
-            </p>
+          <p className="mb-2" style={{ color: secondaryTextColor }}>
+  @{profile.username}
+</p>
+
+<p className="text-sm mb-4" style={{ color: tertiaryTextColor }}>
+  Se unió en {formatDate(profile.createdAt)}
+</p>
+
             <div>
               <BadgeList userId={profile.uid} size="md" />
             </div>
