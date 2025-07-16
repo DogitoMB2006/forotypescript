@@ -101,7 +101,7 @@ const GifSelector: FC<GifSelectorProps> = ({ isOpen, onClose, onSelectGif }) => 
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+      <div className="bg-gray-900 border border-gray-800 rounded-xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col">
         <div className="p-4 sm:p-6 border-b border-gray-800 flex-shrink-0">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl sm:text-2xl font-bold text-white">Seleccionar GIF</h2>
@@ -138,7 +138,7 @@ const GifSelector: FC<GifSelectorProps> = ({ isOpen, onClose, onSelectGif }) => 
           </form>
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-hidden">
           <GifContainer
             gifs={gifs}
             loading={loading}
