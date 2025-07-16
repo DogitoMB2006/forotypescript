@@ -1,6 +1,5 @@
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage } from '../firebase/config';
-import { processAudioForBetterQuality } from '../utils/audioProcessor';
 
 export const uploadAudioFile = async (audioBlob: Blob, userId: string): Promise<string> => {
   try {
@@ -13,31 +12,15 @@ export const uploadAudioFile = async (audioBlob: Blob, userId: string): Promise<
       throw new Error('El archivo de audio está vacío');
     }
     
-    // Procesar audio para mejor calidad
-    const processedBlob = await processAudioForBetterQuality(audioBlob);
+    // Subir directamente sin procesamiento
+    const fileName = `voice_note_${Date.now()}.webm`;
+    const audioRef = ref(storage, `audio/${userId}/${fileName}`);
     
-    let fileName = `voice_note_${Date.now()}`;
-    let fileExtension = '.wav';
-    let mimeType = 'audio/wav';
-    
-    const audioFile = new File([processedBlob], fileName + fileExtension, {
-      type: mimeType
+    // Subir directamente el blob original
+    const snapshot = await uploadBytes(audioRef, audioBlob, {
+      contentType: audioBlob.type || 'audio/webm'
     });
     
-    const audioRef = ref(storage, `audio/${userId}/${fileName + fileExtension}`);
-    
-    const metadata = {
-      contentType: mimeType,
-      customMetadata: {
-        'Access-Control-Allow-Origin': '*',
-        'originalSize': audioBlob.size.toString(),
-        'processedSize': processedBlob.size.toString(),
-        'uploadedAt': new Date().toISOString(),
-        'quality': 'enhanced'
-      }
-    };
-    
-    const snapshot = await uploadBytes(audioRef, audioFile, metadata);
     const downloadURL = await getDownloadURL(snapshot.ref);
     
     console.log('Audio uploaded successfully:', downloadURL);
