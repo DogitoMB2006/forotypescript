@@ -13,6 +13,7 @@ import Avatar from '../../ui/Avatar';
 import ClickableUsername from '../../ui/ClickableUsername';
 import DefaultBadge from '../../user/DefaultBadge';
 import UserRoleDisplay from '../../user/UserRoleDisplay';
+import VoiceNotePlayer from '../../comments/VoiceNotePlayer';
 
 interface CommentItemProps {
   comment: Comment;
@@ -35,7 +36,8 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
   
   const isAuthor = user?.uid === comment.authorId;
   const canDeleteComment = isAuthor || hasPermission('delete', 'comments');
-  const canEditComment = isAuthor;
+  const isVoiceNote = comment.content.includes('[VOICE_NOTE]');
+  const canEditComment = isAuthor && !isVoiceNote;
 
   useEffect(() => {
     const fetchAuthorProfile = async () => {
@@ -69,6 +71,44 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
     if (diffInSeconds < 3600) return `Hace ${Math.floor(diffInSeconds / 60)} min`;
     if (diffInSeconds < 86400) return `Hace ${Math.floor(diffInSeconds / 3600)} h`;
     return `Hace ${Math.floor(diffInSeconds / 86400)} días`;
+  };
+
+  const processContent = (text: string) => {
+    const voiceNoteRegex = /\[VOICE_NOTE\](.*?)\[\/VOICE_NOTE\]/g;
+    if (voiceNoteRegex.test(text)) {
+      const match = text.match(/\[VOICE_NOTE\](.*?)\[\/VOICE_NOTE\]/);
+      if (match && match[1]) {
+        const audioUrl = match[1];
+        const beforeNote = text.substring(0, text.indexOf('[VOICE_NOTE]'));
+        
+        return (
+          <div>
+            {beforeNote && (
+              <div className="mb-2">
+                {processRegularContent(beforeNote)}
+              </div>
+            )}
+            <VoiceNotePlayer audioUrl={audioUrl} />
+          </div>
+        );
+      }
+    }
+
+    return processRegularContent(text);
+  };
+
+  const processRegularContent = (text: string) => {
+    const mentionRegex = /@(\w+)/g;
+    return text.split(mentionRegex).map((part, index) => {
+      if (index % 2 === 1) {
+        return (
+          <span key={index} className="text-blue-400 font-medium">
+            @{part}
+          </span>
+        );
+      }
+      return part;
+    });
   };
 
   const handleEdit = async (newContent: string) => {
@@ -130,20 +170,6 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
   const handleReplyCreated = (reply: Comment) => {
     onReplyAdded(comment.id, reply);
     setShowReplyForm(false);
-  };
-
-  const processContent = (text: string) => {
-    const mentionRegex = /@(\w+)/g;
-    return text.split(mentionRegex).map((part, index) => {
-      if (index % 2 === 1) {
-        return (
-          <span key={index} className="text-blue-400 font-medium">
-            @{part}
-          </span>
-        );
-      }
-      return part;
-    });
   };
 
   const truncateName = (name: string, maxLength: number = 15) => {

@@ -3,9 +3,24 @@ import { useState, useEffect } from 'react';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { getUserCustomTheme } from '../../services/profileThemeService';
-import type { Post } from '../../services/postService';
 import type { CustomProfileTheme } from '../../types/profileTheme';
 import PostCard from '../posts/PostCard';
+
+interface Post {
+  id: string;
+  title: string;
+  content: string;
+  imageUrls: string[];
+  authorId: string;
+  authorUsername: string;
+  authorDisplayName: string;
+  categoryId?: string | null;
+  createdAt: any;
+  updatedAt: any;
+  likes: number;
+  commentsCount: number;
+  likedBy: string[];
+}
 
 interface ProfilePostsProps {
   userId: string;
