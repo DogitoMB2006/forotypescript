@@ -32,15 +32,15 @@ const Home: FC = () => {
         onDismiss={handleDismiss}
       />
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-4">Dogito's Forum</h1>
-          <p className="text-gray-400 text-lg">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-2xl">
+        <div className="text-center mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Dogito's Forum</h1>
+          <p className="text-gray-400 text-sm sm:text-base">
             Comparte tus ideas y conecta con la comunidad
           </p>
         </div>
 
-        <div className="mb-8">
+        <div className="mb-6">
           <PostsList />
         </div>
       </div>

@@ -64,10 +64,11 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
     
-    if (diffInSeconds < 60) return 'Hace un momento';
-    if (diffInSeconds < 3600) return `Hace ${Math.floor(diffInSeconds / 60)} min`;
-    if (diffInSeconds < 86400) return `Hace ${Math.floor(diffInSeconds / 3600)} h`;
-    return `Hace ${Math.floor(diffInSeconds / 86400)} días`;
+    if (diffInSeconds < 60) return 'ahora';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d`;
+    return `${Math.floor(diffInSeconds / 604800)}sem`;
   };
 
   const processContent = (text: string) => {
@@ -151,87 +152,89 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
   return (
     <>
       <Link to={`/post/${post.id}`}>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6 hover:border-gray-700 hover:bg-gray-800/50 transition-all duration-200 cursor-pointer group shadow-lg hover:shadow-xl">
-          <div className="flex items-start space-x-3 sm:space-x-4">
-            <Avatar 
-              src={authorProfile?.profileImageUrl}
-              name={post.authorDisplayName}
-              size="lg"
-              className="flex-shrink-0 shadow-md"
-            />
+        <article className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 backdrop-blur-sm border border-gray-700/50 rounded-2xl p-4 sm:p-5 hover:border-gray-600/60 hover:shadow-xl hover:shadow-black/20 transition-all duration-300 cursor-pointer group hover:scale-[1.02] transform-gpu">
+          <div className="flex items-start gap-3 sm:gap-4">
+            <div className="relative">
+              <Avatar 
+                src={authorProfile?.profileImageUrl}
+                name={post.authorDisplayName}
+                size="lg"
+                className="flex-shrink-0 ring-2 ring-gray-700/50 group-hover:ring-blue-500/30 transition-all duration-300"
+              />
+              <div className="absolute -bottom-1 -right-1">
+                <DefaultBadge badgeId={(authorProfile as any)?.defaultBadgeId} size="sm" />
+              </div>
+            </div>
             
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-start space-x-2 flex-wrap min-w-0 flex-1">
-                  <div className="flex items-center space-x-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 min-w-0">
                     <ClickableUsername
                       userId={post.authorId}
                       username={post.authorUsername}
                       displayName={post.authorDisplayName}
-                      className="font-semibold text-white hover:text-blue-400 truncate"
+                      className="font-bold text-white hover:text-blue-400 text-sm sm:text-base truncate transition-colors duration-200"
                     >
                       {post.authorDisplayName}
                     </ClickableUsername>
-                    <div className="flex items-center space-x-1 flex-shrink-0">
-                      <DefaultBadge badgeId={(authorProfile as any)?.defaultBadgeId} size="sm" />
-                      <UserRoleDisplay userId={post.authorId} size="sm" />
-                    </div>
+                    <UserRoleDisplay userId={post.authorId} size="sm" />
                   </div>
-                  <div className="flex items-center space-x-2 text-gray-500 text-sm flex-wrap">
-                    <span className="hidden sm:inline">@{post.authorUsername}</span>
-                    <span className="hidden sm:inline">•</span>
-                    <span>{formatTimeAgo(post.createdAt)}</span>
+                  <div className="flex items-center gap-1.5 text-gray-500 text-xs sm:text-sm">
+                    <span>•</span>
+                    <time className="font-medium">{formatTimeAgo(post.createdAt)}</time>
                   </div>
                 </div>
                 
-                {canDeletePost && (
-                  <div className="flex items-center space-x-2">
-                    {!isAuthor && (
-                      <div className="px-2 py-1 bg-red-900/30 border border-red-500/50 rounded text-red-400 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        Mod
-                      </div>
-                    )}
+                <div className="flex items-center gap-2">
+                  <CategoryBadge categoryId={post.categoryId} size="sm" />
+                  {canDeletePost && (
                     <button
                       onClick={handleDeleteClick}
-                      className={`p-1 sm:p-2 rounded-lg transition-colors duration-200 opacity-0 group-hover:opacity-100 flex-shrink-0 ${getDeleteButtonStyle()}`}
+                      className={`p-2 rounded-xl transition-all duration-200 opacity-0 group-hover:opacity-100 ${getDeleteButtonStyle()}`}
                       title={getDeleteButtonTitle()}
                     >
-                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
               
-              <h2 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4 group-hover:text-blue-400 transition-colors duration-200 line-clamp-2">
-                {post.title}
-              </h2>
-              
-              <div className="text-gray-300 mb-4 sm:mb-6 line-clamp-3 leading-relaxed text-sm sm:text-base">
-                {processContent(post.content)}
+              <div className="mb-3">
+                <h2 className="text-lg sm:text-xl font-bold text-white mb-2 group-hover:text-blue-400 transition-colors duration-300 line-clamp-2 leading-tight">
+                  {post.title}
+                </h2>
+                
+                <div className="text-gray-300 text-sm sm:text-base line-clamp-3 leading-relaxed">
+                  {processContent(post.content)}
+                </div>
               </div>
               
               {post.imageUrls && post.imageUrls.length > 0 && (
-                <div className="mb-4 sm:mb-6">
+                <div className="mb-4 rounded-xl overflow-hidden border border-gray-700/30">
                   {post.imageUrls.length === 1 ? (
-                    <img
-                      src={post.imageUrls[0]}
-                      alt="Post image"
-                      className="w-full max-h-48 sm:max-h-64 object-cover rounded-lg border border-gray-700 shadow-md"
-                    />
+                    <div className="relative group/image">
+                      <img
+                        src={post.imageUrls[0]}
+                        alt="Post image"
+                        className="w-full max-h-48 sm:max-h-56 object-cover transition-transform duration-300 group-hover/image:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover/image:opacity-100 transition-opacity duration-300"></div>
+                    </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-1 sm:gap-2">
+                    <div className="grid grid-cols-2 gap-2 p-2 bg-gray-800/30">
                       {post.imageUrls.slice(0, 4).map((url, index) => (
-                        <div key={index} className="relative">
+                        <div key={index} className="relative aspect-square rounded-lg overflow-hidden">
                           <img
                             src={url}
                             alt={`Post image ${index + 1}`}
-                            className="w-full h-24 sm:h-32 object-cover rounded-lg border border-gray-700 shadow-md"
+                            className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
                           />
                           {index === 3 && post.imageUrls.length > 4 && (
-                            <div className="absolute inset-0 bg-black/70 rounded-lg flex items-center justify-center">
-                              <span className="text-white font-semibold text-sm">
+                            <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                              <span className="text-white font-bold text-sm">
                                 +{post.imageUrls.length - 4}
                               </span>
                             </div>
@@ -243,29 +246,30 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
                 </div>
               )}
               
-              <div className="flex items-center justify-between text-gray-500 pt-3 sm:pt-4 border-t border-gray-800">
-                <div className="flex items-center space-x-4 sm:space-x-6">
+              <div className="flex items-center justify-between pt-3 border-t border-gray-700/30">
+                <div className="flex items-center gap-1 sm:gap-2">
                   <LikeButton
                     postId={post.id}
                     initialLikes={post.likes || 0}
                     initialLikedBy={post.likedBy || []}
                     size="md"
                     showCount={true}
+                    className="hover:scale-110 transition-transform duration-200"
                   />
                   
                   <Link
                     to={`/post/${post.id}#comments`}
-                    className="flex items-center space-x-1 sm:space-x-2 hover:text-blue-400 transition-colors duration-200 py-1 sm:py-2 px-2 sm:px-3 rounded-lg hover:bg-blue-900/20"
+                    className="flex items-center gap-1.5 text-gray-500 hover:text-blue-400 transition-all duration-200 py-2 px-3 rounded-xl hover:bg-blue-900/20 hover:scale-105"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                     </svg>
-                    <span className="text-xs sm:text-sm">{commentCount}</span>
+                    <span className="text-sm font-medium">{commentCount}</span>
                   </Link>
                   
                   <button 
-                    className="flex items-center space-x-1 sm:space-x-2 hover:text-green-400 transition-colors duration-200 py-1 sm:py-2 px-2 sm:px-3 rounded-lg hover:bg-green-900/20"
+                    className="flex items-center gap-1.5 text-gray-500 hover:text-emerald-400 transition-all duration-200 py-2 px-3 rounded-xl hover:bg-emerald-900/20 hover:scale-105"
                     onClick={(e) => e.preventDefault()}
                   >
                     <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -274,15 +278,13 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
                   </button>
                 </div>
 
-                <CategoryBadge 
-                  categoryId={post.categoryId} 
-                  size="sm"
-                  className="flex-shrink-0"
-                />
+                <div className="text-xs text-gray-500 font-medium">
+                  @{post.authorUsername}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </article>
       </Link>
 
       {permissionError && (
