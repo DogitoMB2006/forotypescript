@@ -3,7 +3,7 @@ import { useState } from 'react';
 import CreatePost from '../../components/posts/CreatePost';
 import FloatingCreateButton from '../../components/ui/FloatingCreateButton';
 import PostsList from '../../components/posts/PostsList';
-import NewPostNotification from '../../components/ui/NewPostNotification';
+import NewPostAlert from '../../components/ui/NewPostAlert';
 import { useNewPostListener } from '../../hooks/useNewPostListener';
 
 const Home: FC = () => {
@@ -20,11 +20,16 @@ const Home: FC = () => {
     window.location.reload();
   };
 
+  const handleDismiss = () => {
+    markAsRead();
+  };
+
   return (
     <div className="min-h-screen bg-gray-950">
-      <NewPostNotification 
+      <NewPostAlert 
         show={hasNewPosts} 
         onRefresh={handleRefresh}
+        onDismiss={handleDismiss}
       />
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
