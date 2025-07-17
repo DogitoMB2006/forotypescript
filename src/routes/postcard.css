@@ -1,0 +1,167 @@
+.post-image-container {
+  position: relative;
+  overflow: hidden;
+  background-color: rgba(31, 41, 55, 0.8);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.post-image {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  object-position: center;
+  transition: transform 0.3s ease;
+  max-width: 100%;
+  display: block;
+  margin: 0 auto;
+}
+
+.post-image-cover {
+  object-fit: cover;
+}
+
+.post-image:hover {
+  transform: scale(1.02);
+}
+
+.post-image-responsive {
+  height: clamp(12rem, 20vw, 16rem);
+}
+
+.post-image-responsive-small {
+  height: clamp(6rem, 12vw, 10rem);
+}
+
+.post-image-responsive-medium {
+  height: clamp(8rem, 15vw, 12rem);
+}
+
+.post-image-responsive-large {
+  height: clamp(10rem, 18vw, 14rem);
+}
+
+@media (max-width: 480px) {
+  .post-image-responsive {
+    height: clamp(10rem, 25vw, 14rem);
+  }
+  
+  .post-image-responsive-small {
+    height: clamp(5rem, 15vw, 8rem);
+  }
+  
+  .post-image-responsive-medium {
+    height: clamp(7rem, 18vw, 10rem);
+  }
+  
+  .post-image-responsive-large {
+    height: clamp(9rem, 20vw, 12rem);
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  .post-image-responsive {
+    height: clamp(14rem, 18vw, 18rem);
+  }
+  
+  .post-image-responsive-small {
+    height: clamp(7rem, 10vw, 11rem);
+  }
+  
+  .post-image-responsive-medium {
+    height: clamp(9rem, 13vw, 13rem);
+  }
+  
+  .post-image-responsive-large {
+    height: clamp(11rem, 15vw, 15rem);
+  }
+}
+
+@media (min-width: 1024px) {
+  .post-image-responsive {
+    height: clamp(16rem, 15vw, 20rem);
+  }
+  
+  .post-image-responsive-small {
+    height: clamp(8rem, 8vw, 12rem);
+  }
+  
+  .post-image-responsive-medium {
+    height: clamp(10rem, 10vw, 14rem);
+  }
+  
+  .post-image-responsive-large {
+    height: clamp(12rem, 12vw, 16rem);
+  }
+}
+
+.post-image {
+  opacity: 0;
+  animation: fadeInImage 0.3s ease forwards;
+}
+
+@keyframes fadeInImage {
+  to {
+    opacity: 1;
+  }
+}
+
+.image-loading-placeholder {
+  background: linear-gradient(
+    90deg,
+    rgba(75, 85, 99, 0.3) 25%,
+    rgba(107, 114, 128, 0.5) 50%,
+    rgba(75, 85, 99, 0.3) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.more-images-indicator {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+
+.more-images-indicator:hover {
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(12px);
+}
+
+.post-image:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.post-image-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(75, 85, 99, 0.5);
+  color: rgba(156, 163, 175, 1);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 1rem;
+}
+
+.post-image-error::before {
+  content: "📷";
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.post-image-error::after {
+  content: "Imagen no disponible";
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
