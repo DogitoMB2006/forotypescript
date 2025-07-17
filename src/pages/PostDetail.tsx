@@ -93,6 +93,27 @@ const PostDetail: FC = () => {
     }
   }, [location.hash, loading]);
 
+  useEffect(() => {
+    if (!showUserModal) return;
+
+    let initialScrollY = window.scrollY;
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      const scrollDifference = Math.abs(currentScrollY - initialScrollY);
+      
+      if (scrollDifference > 100) {
+        setShowUserModal(false);
+      }
+    };
+
+    document.addEventListener('scroll', handleScroll);
+
+    return () => {
+      document.removeEventListener('scroll', handleScroll);
+    };
+  }, [showUserModal]);
+
   const handleUserClick = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
