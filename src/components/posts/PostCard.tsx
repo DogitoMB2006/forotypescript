@@ -14,6 +14,7 @@ import Avatar from '../ui/Avatar';
 import DefaultBadge from '../user/DefaultBadge';
 import UserRoleDisplay from '../user/UserRoleDisplay';
 import CategoryBadge from '../categories/CategoryBadge';
+import UserModalPostcard from './UserModalPostcard';
 
 interface PostCardProps {
   post: Post;
@@ -27,6 +28,8 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
   const [authorProfile, setAuthorProfile] = useState<UserProfile | null>(null);
   const [refreshProfile, setRefreshProfile] = useState(0);
   const [permissionError, setPermissionError] = useState('');
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [userModalPosition, setUserModalPosition] = useState({ x: 0, y: 0 });
   
   const isAuthor = user?.uid === post.authorId;
   const canDeletePost = isAuthor || hasPermission('delete', 'posts');
@@ -72,14 +75,15 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
   const processContent = (text: string) => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     return text.split(urlRegex).map((part, index) => {
-      if (urlRegex.test(part)) {
+      if (part.match(urlRegex)) {
         return (
           <a 
             key={index} 
             href={part} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-emerald-400 hover:text-emerald-300 underline transition-colors duration-200 break-all"
+            className="text-emerald-400 hover:text-emerald-300 underline transition-colors duration-200"
+            onClick={(e) => e.stopPropagation()}
           >
             {part}
           </a>
@@ -89,63 +93,88 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
     });
   };
 
-  const handleDeleteClick = async () => {
-    try {
-      const hasDelPermission = await userHasPermission(user?.uid || '', 'delete', 'posts');
-      
-      if (!isAuthor && !hasDelPermission) {
-        setPermissionError('No tienes permisos para eliminar posts');
-        return;
-      }
-      
-      setShowDeleteModal(true);
-    } catch (error) {
-      console.error('Error checking permissions:', error);
-      setPermissionError('Error al verificar permisos');
-    }
+  const handleUserClick = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = event.currentTarget.getBoundingClientRect();
+    setUserModalPosition({
+      x: rect.left + rect.width / 2,
+      y: rect.bottom + 10
+    });
+    setShowUserModal(true);
   };
 
   const handleDelete = async () => {
     try {
       await deletePost(post.id);
-      onPostDeleted?.(post.id);
+      if (onPostDeleted) {
+        onPostDeleted(post.id);
+      }
     } catch (error) {
       console.error('Error deleting post:', error);
     }
   };
 
+  const handleDeleteClick = async () => {
+    if (!canDeletePost) {
+      setPermissionError('No tienes permisos para eliminar esta publicación');
+      return;
+    }
+
+    if (!isAuthor) {
+      try {
+        const hasPermissionResult = await userHasPermission(user!.uid, 'delete', 'posts');
+        if (!hasPermissionResult) {
+          setPermissionError('No tienes permisos para realizar esta acción de moderación');
+          return;
+        }
+      } catch (error) {
+        console.error('Error checking permissions:', error);
+        setPermissionError('Error al verificar permisos. Intenta refrescar la página.');
+        return;
+      }
+    }
+
+    setShowDeleteModal(true);
+  };
+
   const getDeleteButtonStyle = () => {
     if (isAuthor) {
-      return "text-red-400 hover:text-red-300 hover:bg-red-900/20";
+      return 'bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/50';
     }
-    return "text-red-500 hover:text-red-400 hover:bg-red-900/20";
+    return 'bg-orange-600/20 hover:bg-orange-600/40 text-orange-400 border border-orange-500/50';
   };
 
   const getDeleteButtonTitle = () => {
-    if (isAuthor) {
-      return "Eliminar mi post";
-    }
-    return "Eliminar post (Moderación)";
+    return isAuthor ? 'Eliminar publicación' : 'Eliminar publicación (Moderación)';
   };
 
   return (
     <>
-      <article className="group bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-emerald-500/10 hover:border-emerald-500/30">
+      <article className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-600/30 rounded-2xl overflow-hidden hover:border-emerald-500/30 transition-all duration-300 group shadow-xl hover:shadow-2xl hover:shadow-emerald-500/10">
         <Link to={`/post/${post.id}`} className="block">
           <div className="p-4 sm:p-6">
-            <div className="flex items-start gap-3 sm:gap-4 mb-4">
-              <Avatar 
-                src={authorProfile?.profileImageUrl}
-                name={post.authorDisplayName}
-                size="md"
-                className="flex-shrink-0"
-              />
+            <div className="flex items-start space-x-3 sm:space-x-4 mb-4 sm:mb-6 relative">
+              <button
+                onClick={handleUserClick}
+                className="flex-shrink-0 hover:scale-105 transition-transform duration-200"
+              >
+                <Avatar
+                  src={authorProfile?.profileImageUrl}
+                  alt={post.authorDisplayName}
+                  name={post.authorDisplayName}
+                  size="md"
+                />
+              </button>
               
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <span className="font-semibold text-white group-hover:text-emerald-400 transition-colors duration-200">
+                  <button
+                    onClick={handleUserClick}
+                    className="font-semibold text-white group-hover:text-emerald-400 transition-colors duration-200 hover:underline"
+                  >
                     {post.authorDisplayName}
-                  </span>
+                  </button>
                   
                   <DefaultBadge badgeId={(authorProfile as any)?.defaultBadgeId} />
                   <UserRoleDisplay userId={post.authorId} />
@@ -173,7 +202,7 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
                     >
                       <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                      </svg>
                     </button>
                   </div>
                 )}
@@ -286,6 +315,14 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
           </div>
         </div>
       )}
+
+      <UserModalPostcard
+        userId={post.authorId}
+        username={post.authorUsername}
+        isOpen={showUserModal}
+        onClose={() => setShowUserModal(false)}
+        anchorPosition={userModalPosition}
+      />
 
       <DeletePost
         isOpen={showDeleteModal}
