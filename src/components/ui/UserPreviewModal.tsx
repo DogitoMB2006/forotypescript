@@ -95,56 +95,20 @@ const UserPreviewModal: FC<UserPreviewModalProps> = ({
     return luma > 128;
   };
 
-  const getOptimalPosition = () => {
-    if (!anchorPosition) {
-      return {
+  const modalStyle = anchorPosition
+    ? {
+        position: 'fixed' as const,
+        top: Math.min(anchorPosition.y, window.innerHeight - 350),
+        left: Math.min(anchorPosition.x, window.innerWidth - 320),
+        zIndex: 1000,
+      }
+    : {
         position: 'fixed' as const,
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
         zIndex: 1000,
       };
-    }
-
-    const modalWidth = 320;
-    const modalHeight = 400;
-    const padding = 16;
-    
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    
-let left = anchorPosition.x + 10;
-let top = anchorPosition.y - modalHeight / 2;
-
-    
-    // Ajustar horizontalmente
-    if (left + modalWidth + padding > viewportWidth) {
-      left = anchorPosition.x - modalWidth;
-    }
-    if (left < padding) {
-      left = padding;
-    }
-    
-    // Ajustar verticalmente
-    if (top + modalHeight + padding > viewportHeight) {
-      top = anchorPosition.y - modalHeight - 10;
-    }
-    if (top < padding) {
-      top = padding;
-    }
-    
-    // Si no cabe en ningún lado, centrar
-    if (modalHeight + (padding * 2) > viewportHeight) {
-      top = (viewportHeight - modalHeight) / 2;
-    }
-    
-    return {
-      position: 'fixed' as const,
-      top: Math.max(padding, Math.min(top, viewportHeight - modalHeight - padding)),
-      left: Math.max(padding, Math.min(left, viewportWidth - modalWidth - padding)),
-      zIndex: 1000,
-    };
-  };
 
   if (!isOpen || loading || !userProfile) return null;
 
@@ -155,14 +119,14 @@ let top = anchorPosition.y - modalHeight / 2;
   const tertiaryTextColor = isLightColor(primaryColor) ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)';
 
   return (
-    <div className="user-preview-modal" style={getOptimalPosition()} ref={modalRef}>
+    <div className="user-preview-modal" style={modalStyle} ref={modalRef}>
       <div
-        className="rounded-2xl shadow-2xl w-80 overflow-hidden animate-in fade-in-0 slide-in-from-top-2 duration-200 border-2 backdrop-blur-sm"
+        className="rounded-xl shadow-2xl w-80 overflow-hidden animate-in fade-in-0 slide-in-from-top-2 duration-200 border-2"
         style={{
           backgroundColor: primaryColor,
           backgroundImage: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
           borderColor: primaryColor,
-          boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.6), 0 0 0 1px ${primaryColor}40`
+          boxShadow: `0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.04), 0 0 0 1px ${primaryColor}`
         }}
       >
         <div className="relative">
@@ -183,12 +147,12 @@ let top = anchorPosition.y - modalHeight / 2;
                 <img
                   src={userProfile.profileImageUrl}
                   alt={userProfile.displayName}
-                  className="w-20 h-20 rounded-full object-cover border-4 shadow-xl"
+                  className="w-20 h-20 rounded-full object-cover border-4"
                   style={{ borderColor: '#111827' }}
                 />
               ) : (
                 <div
-                  className="w-20 h-20 rounded-full border-4 flex items-center justify-center text-white font-bold text-2xl shadow-xl"
+                  className="w-20 h-20 rounded-full border-4 flex items-center justify-center text-white font-bold text-2xl"
                   style={{
                     background: `linear-gradient(135deg, ${accentColor}, ${primaryColor})`,
                     borderColor: '#111827'
@@ -230,7 +194,7 @@ let top = anchorPosition.y - modalHeight / 2;
               <Link
                 to={`/perfil/${userProfile.uid}`}
                 onClick={onClose}
-                className="flex-1 text-center py-2.5 px-4 rounded-xl text-sm font-medium transition-all duration-200 transform hover:scale-105 text-white border"
+                className="flex-1 text-center py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 text-white border"
                 style={{
                   background: `linear-gradient(135deg, ${accentColor}, ${primaryColor})`,
                   borderColor: primaryColor
@@ -240,7 +204,7 @@ let top = anchorPosition.y - modalHeight / 2;
               </Link>
               <button
                 onClick={onClose}
-                className="p-2.5 rounded-xl transition-colors duration-200 border"
+                className="p-2.5 rounded-lg transition-colors duration-200 border"
                 title="Cerrar"
                 style={{
                   borderColor: primaryColor + '40',
