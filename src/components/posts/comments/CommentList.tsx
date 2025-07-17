@@ -167,4 +167,4 @@ const CommentList: FC<CommentListProps> = ({ postId }) => {
   );
 };
 
-export default CommentList;
+export default CommentList; //ee
