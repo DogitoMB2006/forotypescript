@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase/config';
-import type { Post } from '../services/postService';
 
 export const useNewPostListener = () => {
   const [hasNewPosts, setHasNewPosts] = useState(false);
@@ -17,7 +16,6 @@ export const useNewPostListener = () => {
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       if (!querySnapshot.empty) {
         const latestPost = querySnapshot.docs[0];
-        const postData = latestPost.data() as Post;
         const newPostId = latestPost.id;
 
         if (latestPostId && latestPostId !== newPostId) {
