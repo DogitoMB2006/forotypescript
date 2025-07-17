@@ -80,8 +80,7 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
             href={part} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-blue-400 hover:text-blue-300 underline transition-colors duration-200"
-            onClick={(e) => e.stopPropagation()}
+            className="text-emerald-400 hover:text-emerald-300 underline transition-colors duration-200 break-all"
           >
             {part}
           </a>
@@ -91,203 +90,180 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
     });
   };
 
-  const handleDelete = async (postId: string) => {
-    if (!user) return;
-
-    if (!isAuthor) {
-      const isAdmin = user.email === 'dogitomb2022@gmail.com';
-      if (!isAdmin) {
-        const hasDeletePermission = await userHasPermission(user.uid, 'delete', 'posts');
-        if (!hasDeletePermission) {
-          setPermissionError('No tienes permisos suficientes para realizar esta acción. Por favor, refresca la página.');
-          return;
-        }
-      }
-    }
-
+  const handleDeleteClick = async () => {
     try {
-      await deletePost(postId, post.imageUrls);
-      onPostDeleted?.(postId);
+      const hasDelPermission = await userHasPermission(user?.uid || '', 'delete', 'posts');
+      
+      if (!isAuthor && !hasDelPermission) {
+        setPermissionError('No tienes permisos para eliminar posts');
+        return;
+      }
+      
+      setShowDeleteModal(true);
     } catch (error) {
-      console.error('Error deleting post:', error);
-      throw error;
+      console.error('Error checking permissions:', error);
+      setPermissionError('Error al verificar permisos');
     }
   };
 
-  const handleDeleteClick = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!user) return;
-
-    if (!isAuthor) {
-      const isAdmin = user.email === 'dogitomb2022@gmail.com';
-      if (!isAdmin) {
-        const hasDeletePermission = await userHasPermission(user.uid, 'delete', 'posts');
-        if (!hasDeletePermission) {
-          setPermissionError('No tienes permisos suficientes para realizar esta acción. Por favor, refresca la página.');
-          return;
-        }
-      }
+  const handleDelete = async () => {
+    try {
+      await deletePost(post.id);
+      onPostDeleted?.(post.id);
+    } catch (error) {
+      console.error('Error deleting post:', error);
     }
-
-    setShowDeleteModal(true);
   };
 
   const getDeleteButtonStyle = () => {
     if (isAuthor) {
-      return "text-gray-500 hover:text-red-400 hover:bg-red-900/20";
+      return "text-red-400 hover:text-red-300 hover:bg-red-900/20";
     }
     return "text-red-500 hover:text-red-400 hover:bg-red-900/20";
   };
 
   const getDeleteButtonTitle = () => {
     if (isAuthor) {
-      return "Eliminar post";
+      return "Eliminar mi post";
     }
     return "Eliminar post (Moderación)";
   };
 
   return (
     <>
-      <Link to={`/post/${post.id}`}>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 sm:p-6 hover:border-gray-700 hover:bg-gray-800/50 transition-all duration-200 cursor-pointer group shadow-lg hover:shadow-xl">
-          <div className="flex items-start space-x-3 sm:space-x-4">
+      <article className="group bg-gradient-to-br from-slate-800/90 to-slate-700/90 backdrop-blur-sm border border-slate-600/50 rounded-2xl overflow-hidden transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-emerald-500/10 hover:border-emerald-500/30">
+        <div className="p-4 sm:p-6">
+          <div className="flex items-start gap-3 sm:gap-4 mb-4">
             <Avatar 
               src={authorProfile?.profileImageUrl}
               name={post.authorDisplayName}
-              size="lg"
-              className="flex-shrink-0 shadow-md"
+              size="md"
+              className="flex-shrink-0"
             />
             
             <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-start space-x-2 flex-wrap min-w-0 flex-1">
-                  <div className="flex items-center space-x-2 min-w-0">
-                    <ClickableUsername
-                      userId={post.authorId}
-                      username={post.authorUsername}
-                      displayName={post.authorDisplayName}
-                      className="font-semibold text-white hover:text-blue-400 truncate"
-                    >
-                      {post.authorDisplayName}
-                    </ClickableUsername>
-                    <div className="flex items-center space-x-1 flex-shrink-0">
-                      <DefaultBadge badgeId={(authorProfile as any)?.defaultBadgeId} size="sm" />
-                      <UserRoleDisplay userId={post.authorId} size="sm" />
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2 text-gray-500 text-sm flex-wrap">
-                    <span className="hidden sm:inline">@{post.authorUsername}</span>
-                    <span className="hidden sm:inline">•</span>
-                    <span>{formatTimeAgo(post.createdAt)}</span>
-                  </div>
-                </div>
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <ClickableUsername 
+                  userId={post.authorId}
+                  username={post.authorUsername || post.authorDisplayName}
+                  displayName={post.authorDisplayName}
+                  className="font-semibold text-white hover:text-emerald-400 transition-colors duration-200"
+                >
+                  {post.authorDisplayName}
+                </ClickableUsername>
                 
-                {canDeletePost && (
-                  <div className="flex items-center space-x-2">
-                    {!isAuthor && (
-                      <div className="px-2 py-1 bg-red-900/30 border border-red-500/50 rounded text-red-400 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                        Mod
-                      </div>
-                    )}
-                    <button
-                      onClick={handleDeleteClick}
-                      className={`p-1 sm:p-2 rounded-lg transition-colors duration-200 opacity-0 group-hover:opacity-100 flex-shrink-0 ${getDeleteButtonStyle()}`}
-                      title={getDeleteButtonTitle()}
-                    >
-                      <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                )}
+                <DefaultBadge badgeId={(authorProfile as any)?.defaultBadgeId} />
+                <UserRoleDisplay userId={post.authorId} />
+                
+                <span className="text-slate-500 text-sm">•</span>
+                <time className="text-slate-400 text-sm">{formatTimeAgo(post.createdAt)}</time>
               </div>
               
-              <h2 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4 group-hover:text-blue-400 transition-colors duration-200 line-clamp-2">
-                {post.title}
-              </h2>
-              
-              <div className="text-gray-300 mb-4 sm:mb-6 line-clamp-3 leading-relaxed text-sm sm:text-base">
-                {processContent(post.content)}
-              </div>
-              
-              {post.imageUrls && post.imageUrls.length > 0 && (
-                <div className="mb-4 sm:mb-6">
-                  {post.imageUrls.length === 1 ? (
-                    <img
-                      src={post.imageUrls[0]}
-                      alt="Post image"
-                      className="w-full max-h-48 sm:max-h-64 object-cover rounded-lg border border-gray-700 shadow-md"
-                    />
-                  ) : (
-                    <div className="grid grid-cols-2 gap-1 sm:gap-2">
-                      {post.imageUrls.slice(0, 4).map((url, index) => (
-                        <div key={index} className="relative">
-                          <img
-                            src={url}
-                            alt={`Post image ${index + 1}`}
-                            className="w-full h-24 sm:h-32 object-cover rounded-lg border border-gray-700 shadow-md"
-                          />
-                          {index === 3 && post.imageUrls.length > 4 && (
-                            <div className="absolute inset-0 bg-black/70 rounded-lg flex items-center justify-center">
-                              <span className="text-white font-semibold text-sm">
-                                +{post.imageUrls.length - 4}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+              {post.categoryId && (
+                <div className="mb-2">
+                  <CategoryBadge categoryId={post.categoryId} />
                 </div>
               )}
               
-              <div className="flex items-center justify-between text-gray-500 pt-3 sm:pt-4 border-t border-gray-800">
-                <div className="flex items-center space-x-4 sm:space-x-6">
-                  <LikeButton
-                    postId={post.id}
-                    initialLikes={post.likes || 0}
-                    initialLikedBy={post.likedBy || []}
-                    size="md"
-                    showCount={true}
-                  />
-                  
-                  <Link
-                    to={`/post/${post.id}#comments`}
-                    className="flex items-center space-x-1 sm:space-x-2 hover:text-blue-400 transition-colors duration-200 py-1 sm:py-2 px-2 sm:px-3 rounded-lg hover:bg-blue-900/20"
-                    onClick={(e) => e.stopPropagation()}
+              {canDeletePost && (
+                <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDeleteClick();
+                    }}
+                    className={`p-1 sm:p-2 rounded-lg transition-all duration-200 opacity-0 group-hover:opacity-100 flex-shrink-0 ${getDeleteButtonStyle()}`}
+                    title={getDeleteButtonTitle()}
                   >
                     <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    <span className="text-xs sm:text-sm">{commentCount}</span>
-                  </Link>
-                  
-                  <button 
-                    className="flex items-center space-x-1 sm:space-x-2 hover:text-green-400 transition-colors duration-200 py-1 sm:py-2 px-2 sm:px-3 rounded-lg hover:bg-green-900/20"
-                    onClick={(e) => e.preventDefault()}
-                  >
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                     </svg>
                   </button>
                 </div>
-
-                <CategoryBadge 
-                  categoryId={post.categoryId} 
-                  size="sm"
-                  className="flex-shrink-0"
-                />
+              )}
+            </div>
+          </div>
+          
+          <Link to={`/post/${post.id}`} className="block">
+            <h2 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4 group-hover:text-emerald-400 transition-colors duration-200 line-clamp-2">
+              {post.title}
+            </h2>
+            
+            <div className="text-slate-300 mb-4 sm:mb-6 line-clamp-3 leading-relaxed text-sm sm:text-base">
+              {processContent(post.content)}
+            </div>
+            
+            {post.imageUrls && post.imageUrls.length > 0 && (
+              <div className="mb-4 sm:mb-6">
+                {post.imageUrls.length === 1 ? (
+                  <div className="relative overflow-hidden rounded-xl border border-slate-600/30">
+                    <img 
+                      src={post.imageUrls[0]} 
+                      alt={`Imagen del post ${post.title}`}
+                      className="w-full h-48 sm:h-64 object-cover transition-transform duration-300 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                    {post.imageUrls.slice(0, 4).map((imageUrl, index) => (
+                      <div key={index} className="relative overflow-hidden rounded-lg border border-slate-600/30">
+                        <img 
+                          src={imageUrl} 
+                          alt={`Imagen ${index + 1} del post ${post.title}`}
+                          className="w-full h-24 sm:h-32 object-cover transition-transform duration-300 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                        {index === 3 && post.imageUrls.length > 4 && (
+                          <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                            <span className="text-white font-bold text-lg">+{post.imageUrls.length - 4}</span>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+            )}
+          </Link>
+        </div>
+        
+        <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+          <div className="flex items-center justify-between pt-3 border-t border-slate-600/30">
+            <div className="flex items-center space-x-1 sm:space-x-4">
+              <LikeButton 
+                postId={post.id}
+                initialLikes={post.likes || 0}
+                initialLikedBy={post.likedBy || []}
+              />
+              
+              <Link 
+                to={`/post/${post.id}#comments`}
+                className="flex items-center space-x-1 sm:space-x-2 text-slate-400 hover:text-emerald-400 transition-colors duration-200 py-2 px-3 rounded-lg hover:bg-emerald-900/20"
+              >
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+                <span className="text-sm sm:text-base">{commentCount}</span>
+              </Link>
+              
+              <button className="flex items-center space-x-1 sm:space-x-2 text-slate-400 hover:text-cyan-400 transition-colors duration-200 py-2 px-3 rounded-lg hover:bg-cyan-900/20">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                </svg>
+                <span className="text-sm sm:text-base hidden sm:inline">Compartir</span>
+              </button>
             </div>
           </div>
         </div>
-      </Link>
+      </article>
 
       {permissionError && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-red-500 rounded-xl shadow-2xl w-full max-w-md p-6">
+          <div className="bg-slate-800 border border-red-500 rounded-xl shadow-2xl w-full max-w-md p-6">
             <div className="flex items-center space-x-3 mb-4">
               <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center">
                 <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -302,13 +278,13 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
             <div className="flex space-x-3">
               <button
                 onClick={() => setPermissionError('')}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg font-medium transition-colors duration-200"
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-lg font-medium transition-colors duration-200"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => window.location.reload()}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition-colors duration-200"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-medium transition-colors duration-200"
               >
                 Refrescar Página
               </button>

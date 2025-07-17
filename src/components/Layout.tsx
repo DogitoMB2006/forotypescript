@@ -7,7 +7,9 @@ const Layout: FC = () => {
   return (
     <>
       <Navbar />
-      <Outlet />
+      <main className="pt-16">
+        <Outlet />
+      </main>
       <ToastContainer />
     </>
   );

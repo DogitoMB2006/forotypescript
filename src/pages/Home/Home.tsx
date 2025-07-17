@@ -25,18 +25,25 @@ const Home: FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen bg-slate-950">
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900/20 via-emerald-900/5 to-cyan-900/10 pointer-events-none"></div>
+      
       <NewPostAlert 
         show={hasNewPosts} 
         onRefresh={handleRefresh}
         onDismiss={handleDismiss}
       />
 
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-2xl">
-        <div className="text-center mb-4 sm:mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Dogito's Forum</h1>
-          <p className="text-gray-400 text-sm sm:text-base">
-            Comparte tus ideas y conecta con la comunidad
+      <div className="relative container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-2xl">
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="relative inline-block mb-4">
+            <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-emerald-300 via-cyan-300 to-indigo-300 bg-clip-text text-transparent">
+              Dogito's Forum
+            </h1>
+            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-emerald-400 to-cyan-400 rounded-full"></div>
+          </div>
+          <p className="text-slate-400 text-sm sm:text-base max-w-md mx-auto leading-relaxed">
+            Comparte tus ideas y conecta con la comunidad en un espacio diseñado para la creatividad
           </p>
         </div>
 

@@ -17,6 +17,7 @@ interface UserPreviewModalProps {
 
 const UserPreviewModal: FC<UserPreviewModalProps> = ({
   userId,
+  //username,
   isOpen,
   onClose,
   anchorPosition
@@ -95,129 +96,245 @@ const UserPreviewModal: FC<UserPreviewModalProps> = ({
     return luma > 128;
   };
 
-  const modalStyle = anchorPosition
-    ? {
-        position: 'fixed' as const,
-        top: Math.min(anchorPosition.y, window.innerHeight - 350),
-        left: Math.min(anchorPosition.x, window.innerWidth - 320),
-        zIndex: 1000,
-      }
-    : {
+  const getModalPosition = () => {
+    if (!anchorPosition) {
+      return {
         position: 'fixed' as const,
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        zIndex: 1000,
+        zIndex: 9999,
       };
+    }
+
+    const modalWidth = 320;
+    const modalHeight = 400;
+    const padding = 16;
+
+    let top = anchorPosition.y + 8;
+    let left = anchorPosition.x;
+
+    if (left + modalWidth > window.innerWidth - padding) {
+      left = window.innerWidth - modalWidth - padding;
+    }
+    if (left < padding) {
+      left = padding;
+    }
+
+    if (top + modalHeight > window.innerHeight - padding) {
+      top = anchorPosition.y - modalHeight - 8;
+    }
+    if (top < padding + 80) {
+      top = padding + 80;
+    }
+
+    return {
+      position: 'fixed' as const,
+      top: Math.max(padding + 80, top),
+      left: Math.max(padding, left),
+      zIndex: 9999,
+    };
+  };
 
   if (!isOpen || loading || !userProfile) return null;
 
-  const primaryColor = userTheme?.primaryColor || '#3B82F6';
-  const accentColor = userTheme?.accentColor || '#60A5FA';
-  const textColor = isLightColor(accentColor) ? '#000000' : '#FFFFFF';
-  const secondaryTextColor = isLightColor(primaryColor) ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)';
-  const tertiaryTextColor = isLightColor(primaryColor) ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)';
+  const primaryColor = userTheme?.primaryColor || '#0f172a';
+  const accentColor = userTheme?.accentColor || '#10b981';
+  const useCustomTheme = userTheme && (userTheme.primaryColor !== '#3B82F6' || userTheme.accentColor !== '#60A5FA');
 
   return (
-    <div className="user-preview-modal" style={modalStyle} ref={modalRef}>
-      <div
-        className="rounded-xl shadow-2xl w-80 overflow-hidden animate-in fade-in-0 slide-in-from-top-2 duration-200 border-2"
-        style={{
-          backgroundColor: primaryColor,
-          backgroundImage: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
-          borderColor: primaryColor,
-          boxShadow: `0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 10px 10px -5px rgba(0, 0, 0, 0.04), 0 0 0 1px ${primaryColor}`
-        }}
-      >
-        <div className="relative">
+    <div className="user-preview-modal" style={getModalPosition()} ref={modalRef}>
+      <div className="relative">
+        {useCustomTheme ? (
           <div
-            className="h-32"
+            className="rounded-2xl shadow-2xl w-80 overflow-hidden animate-in fade-in-0 slide-in-from-top-2 duration-200 border-2"
             style={{
-              backgroundImage: userProfile.bannerImageUrl
-                ? `url(${userProfile.bannerImageUrl})`
-                : `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat'
+              backgroundColor: primaryColor,
+              backgroundImage: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
+              borderColor: accentColor,
+              boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px ${accentColor}40`
             }}
-          />
-          <div className="px-4 pt-2">
-            <div className="relative -top-12 flex justify-start -mb-8">
-              {userProfile.profileImageUrl ? (
-                <img
-                  src={userProfile.profileImageUrl}
-                  alt={userProfile.displayName}
-                  className="w-20 h-20 rounded-full object-cover border-4"
-                  style={{ borderColor: '#111827' }}
-                />
-              ) : (
-                <div
-                  className="w-20 h-20 rounded-full border-4 flex items-center justify-center text-white font-bold text-2xl"
-                  style={{
-                    background: `linear-gradient(135deg, ${accentColor}, ${primaryColor})`,
-                    borderColor: '#111827'
-                  }}
-                >
-                  {userProfile.displayName?.charAt(0).toUpperCase()}
+          >
+            <div className="relative">
+              <div
+                className="h-32"
+                style={{
+                  backgroundImage: userProfile.bannerImageUrl
+                    ? `url(${userProfile.bannerImageUrl})`
+                    : `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat'
+                }}
+              />
+              <div className="px-4 pt-2">
+                <div className="relative -top-12 flex justify-start -mb-8">
+                  {userProfile.profileImageUrl ? (
+                    <img
+                      src={userProfile.profileImageUrl}
+                      alt={userProfile.displayName}
+                      className="w-20 h-20 rounded-full object-cover border-4"
+                      style={{ borderColor: primaryColor }}
+                    />
+                  ) : (
+                    <div
+                      className="w-20 h-20 rounded-full border-4 flex items-center justify-center text-white font-bold text-2xl"
+                      style={{
+                        background: `linear-gradient(135deg, ${accentColor}, ${primaryColor})`,
+                        borderColor: primaryColor
+                      }}
+                    >
+                      {userProfile.displayName?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+            </div>
+
+            <div className="p-4 relative -mt-2">
+              <div className="relative z-10 -mt-2">
+                <div className="mb-3">
+                  <h3 
+                    className="font-bold text-lg leading-tight" 
+                    style={{ color: isLightColor(accentColor) ? '#000000' : '#FFFFFF' }}
+                  >
+                    {userProfile.displayName}
+                  </h3>
+                  <p 
+                    className="text-sm" 
+                    style={{ color: isLightColor(primaryColor) ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }}
+                  >
+                    @{userProfile.username}
+                  </p>
+                </div>
+
+                <div className="mb-4">
+                  <BadgeList userId={userProfile.uid} size="sm" />
+                </div>
+
+                {userProfile.bio && (
+                  <p 
+                    className="text-sm leading-relaxed mb-4" 
+                    style={{ color: isLightColor(primaryColor) ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }}
+                  >
+                    {userProfile.bio}
+                  </p>
+                )}
+
+                <p 
+                  className="mb-4 text-xs" 
+                  style={{ color: isLightColor(primaryColor) ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)' }}
+                >
+                  Se unió en {formatDate(userProfile.createdAt)}
+                </p>
+
+                <div className="flex items-center space-x-3">
+                  <Link
+                    to={`/perfil/${userProfile.uid}`}
+                    onClick={onClose}
+                    className="flex-1 text-center py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 text-white border"
+                    style={{
+                      background: `linear-gradient(135deg, ${accentColor}, ${primaryColor})`,
+                      borderColor: accentColor
+                    }}
+                  >
+                    Ver perfil completo
+                  </Link>
+                  <button
+                    onClick={onClose}
+                    className="p-2.5 rounded-lg transition-colors duration-200 border"
+                    title="Cerrar"
+                    style={{
+                      borderColor: accentColor + '40',
+                      color: isLightColor(primaryColor) ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)'
+                    }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-
-        <div className="p-4 relative -mt-2">
-          <div className="relative z-10 -mt-2">
-            <div className="mb-3">
-              <h3 className="font-bold text-lg leading-tight" style={{ color: textColor }}>
-                {userProfile.displayName}
-              </h3>
-              <p className="text-sm" style={{ color: secondaryTextColor }}>
-                @{userProfile.username}
-              </p>
+        ) : (
+          <div className="bg-gradient-to-br from-slate-800/95 to-slate-700/95 backdrop-blur-md border border-slate-600/50 rounded-2xl shadow-2xl w-80 overflow-hidden animate-in fade-in-0 slide-in-from-top-2 duration-200">
+            <div className="relative">
+              <div
+                className="h-32 bg-gradient-to-br from-emerald-600/20 via-cyan-600/20 to-indigo-600/20"
+                style={{
+                  backgroundImage: userProfile.bannerImageUrl
+                    ? `url(${userProfile.bannerImageUrl})`
+                    : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat'
+                }}
+              />
+              <div className="px-4 pt-2">
+                <div className="relative -top-12 flex justify-start -mb-8">
+                  {userProfile.profileImageUrl ? (
+                    <img
+                      src={userProfile.profileImageUrl}
+                      alt={userProfile.displayName}
+                      className="w-20 h-20 rounded-full object-cover border-4 border-slate-700"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full border-4 border-slate-700 bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center text-white font-bold text-2xl">
+                      {userProfile.displayName?.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <div className="mb-4">
-              <BadgeList userId={userProfile.uid} size="sm" />
-            </div>
+            <div className="p-4 relative -mt-2">
+              <div className="relative z-10 -mt-2">
+                <div className="mb-3">
+                  <h3 className="font-bold text-lg leading-tight text-white">
+                    {userProfile.displayName}
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    @{userProfile.username}
+                  </p>
+                </div>
 
-            {userProfile.bio && (
-              <p className="text-sm leading-relaxed mb-4" style={{ color: secondaryTextColor }}>
-                {userProfile.bio}
-              </p>
-            )}
+                <div className="mb-4">
+                  <BadgeList userId={userProfile.uid} size="sm" />
+                </div>
 
-            <p className="mb-4 text-xs" style={{ color: tertiaryTextColor }}>
-              Se unió en {formatDate(userProfile.createdAt)}
-            </p>
+                {userProfile.bio && (
+                  <p className="text-sm leading-relaxed mb-4 text-slate-300">
+                    {userProfile.bio}
+                  </p>
+                )}
 
-            <div className="flex items-center space-x-3">
-              <Link
-                to={`/perfil/${userProfile.uid}`}
-                onClick={onClose}
-                className="flex-1 text-center py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 text-white border"
-                style={{
-                  background: `linear-gradient(135deg, ${accentColor}, ${primaryColor})`,
-                  borderColor: primaryColor
-                }}
-              >
-                Ver perfil completo
-              </Link>
-              <button
-                onClick={onClose}
-                className="p-2.5 rounded-lg transition-colors duration-200 border"
-                title="Cerrar"
-                style={{
-                  borderColor: primaryColor + '40',
-                  color: secondaryTextColor
-                }}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+                <p className="mb-4 text-xs text-slate-500">
+                  Se unió en {formatDate(userProfile.createdAt)}
+                </p>
+
+                <div className="flex items-center space-x-3">
+                  <Link
+                    to={`/perfil/${userProfile.uid}`}
+                    onClick={onClose}
+                    className="flex-1 text-center py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-700 hover:to-cyan-700 text-white border border-emerald-500/50"
+                  >
+                    Ver perfil completo
+                  </Link>
+                  <button
+                    onClick={onClose}
+                    className="p-2.5 rounded-lg transition-colors duration-200 border border-slate-600/50 text-slate-400 hover:text-white hover:bg-slate-700/50"
+                    title="Cerrar"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
