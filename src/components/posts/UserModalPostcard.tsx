@@ -1,14 +1,10 @@
 import type { FC } from 'react';
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import { getUserProfile } from '../../services/userService';
 import { getUserCustomTheme } from '../../services/profileThemeService';
 import type { UserProfile } from '../../services/userService';
 import type { CustomProfileTheme } from '../../types/profileTheme';
 import BadgeList from '../user/BadgeList';
-//import Avatar from '../ui/Avatar';
-//import DefaultBadge from '../user/DefaultBadge';
-//import UserRoleDisplay from '../user/UserRoleDisplay';
 
 interface UserModalPostcardProps {
   userId: string;
@@ -93,6 +89,13 @@ const UserModalPostcard: FC<UserModalPostcardProps> = ({
     return brightness > 155;
   };
 
+  const handleProfileClick = () => {
+    if (userProfile?.uid) {
+      window.open(`/perfil/${userProfile.uid}`, '_blank');
+      onClose();
+    }
+  };
+
   if (!isOpen) return null;
 
   const primaryColor = userTheme?.primaryColor || '#1f2937';
@@ -174,58 +177,44 @@ const UserModalPostcard: FC<UserModalPostcardProps> = ({
                     ? `url(${userProfile.bannerImageUrl})`
                     : `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
                   backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  backgroundRepeat: 'no-repeat'
+                  backgroundPosition: 'center'
                 }}
               />
-              <div className="px-3 sm:px-4 pt-2">
-                <div className="relative -top-8 sm:-top-12 flex justify-start -mb-6 sm:-mb-8">
-                  {userProfile.profileImageUrl ? (
-                    <img
-                      src={userProfile.profileImageUrl}
-                      alt={userProfile.displayName}
-                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-full object-cover border-4"
-                      style={{ borderColor: primaryColor }}
-                    />
-                  ) : (
-                    <div
-                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 flex items-center justify-center text-white font-bold text-xl sm:text-2xl"
-                      style={{
-                        background: `linear-gradient(135deg, ${accentColor}, ${primaryColor})`,
-                        borderColor: primaryColor
-                      }}
-                    >
-                      {userProfile.displayName?.charAt(0).toUpperCase()}
-                    </div>
-                  )}
+              
+              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2">
+                <div className="relative">
+                  <img
+                    src={userProfile.profileImageUrl || '/default-avatar.png'}
+                    alt={userProfile.displayName}
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 object-cover shadow-lg"
+                    style={{ borderColor: accentColor }}
+                  />
+                  <div className="absolute -bottom-1 -right-1">
+                    <BadgeList userId={userId} size="sm" maxDisplay={1} />
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="p-3 sm:p-4 relative -mt-2">
-              <div className="relative z-10 -mt-2">
-                <div className="mb-3">
-                  <h3 
-                    className="font-bold text-base sm:text-lg leading-tight" 
-                    style={{ color: isLightColor(primaryColor) ? '#000000' : '#FFFFFF' }}
-                  >
-                    {userProfile.displayName}
-                  </h3>
-                  <p 
-                    className="text-xs sm:text-sm" 
-                    style={{ color: isLightColor(primaryColor) ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }}
-                  >
-                    @{userProfile.username}
-                  </p>
-                </div>
-
-                <div className="mb-3 sm:mb-4">
-                  <BadgeList userId={userProfile.uid} size="sm" />
-                </div>
+            <div className="pt-10 sm:pt-12 px-4 sm:px-6 pb-4 sm:pb-6">
+              <div className="text-center">
+                <h3 
+                  className="text-lg sm:text-xl font-bold mb-1" 
+                  style={{ color: isLightColor(primaryColor) ? 'rgba(0,0,0,0.9)' : 'rgba(255,255,255,0.9)' }}
+                >
+                  {userProfile.displayName}
+                </h3>
+                
+                <p 
+                  className="text-sm mb-3" 
+                  style={{ color: isLightColor(primaryColor) ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)' }}
+                >
+                  @{userProfile.username}
+                </p>
 
                 {userProfile.bio && (
                   <p 
-                    className="text-xs sm:text-sm leading-relaxed mb-3 sm:mb-4 line-clamp-3" 
+                    className="text-sm mb-3 leading-relaxed" 
                     style={{ color: isLightColor(primaryColor) ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }}
                   >
                     {userProfile.bio}
@@ -240,17 +229,17 @@ const UserModalPostcard: FC<UserModalPostcardProps> = ({
                 </p>
 
                 <div className="flex items-center space-x-2 sm:space-x-3">
-                  <Link
-                    to={`/perfil/${userProfile.uid}`}
-                    onClick={onClose}
-                    className="flex-1 text-center py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 transform hover:scale-105 text-white border"
+                  <button
+                    onClick={handleProfileClick}
+                    disabled={!userProfile?.uid}
+                    className="flex-1 text-center py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 transform hover:scale-105 text-white border disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
-                      background: `linear-gradient(135deg, ${accentColor}, ${primaryColor})`,
+                      background: userProfile?.uid ? `linear-gradient(135deg, ${accentColor}, ${primaryColor})` : '#6b7280',
                       borderColor: accentColor
                     }}
                   >
                     Ver perfil
-                  </Link>
+                  </button>
                   <button
                     onClick={onClose}
                     className="p-2 sm:p-2.5 rounded-lg transition-colors duration-200 border"
