@@ -8,6 +8,7 @@ import PostDetail from '../pages/PostDetail';
 import ProfilePage from '../pages/Profile';
 import Categories from '../pages/Categories';
 import CategoryDetail from '../pages/CategoryDetail';
+import Trending from '../pages/Trending';
 
 export const router = createBrowserRouter([
   {
@@ -17,6 +18,10 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <Home />
+      },
+      {
+        path: '/trending',
+        element: <Trending />
       },
       {
         path: '/crear-post',
