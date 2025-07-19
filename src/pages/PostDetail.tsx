@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getPostById, deletePost } from '../services/postService';
 import { getCommentCount } from '../services/commentService';
 import { getUserProfile } from '../services/userService';
@@ -15,11 +15,11 @@ import DefaultBadge from '../components/user/DefaultBadge';
 import UserRoleDisplay from '../components/user/UserRoleDisplay';
 import CategoryBadge from '../components/categories/CategoryBadge';
 import UserModalPostcard from '../components/posts/UserModalPostcard';
+import BackButton from '../components/ui/BackButton';
 
 const PostDetail: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const location = useLocation();
   const { user, hasPermission } = useAuth();
   const [post, setPost] = useState<Post | null>(null);
   const [commentCount, setCommentCount] = useState(0);
@@ -82,63 +82,26 @@ const PostDetail: FC = () => {
     return () => clearInterval(interval);
   }, [post?.authorId]);
 
-  useEffect(() => {
-    if (location.hash === '#comments') {
-      setTimeout(() => {
-        const commentsSection = document.getElementById('comments-section');
-        if (commentsSection) {
-          commentsSection.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-    }
-  }, [location.hash, loading]);
-
-  useEffect(() => {
-    if (!showUserModal) return;
-
-    let initialScrollY = window.scrollY;
-
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
-      const scrollDifference = Math.abs(currentScrollY - initialScrollY);
-      
-      if (scrollDifference > 100) {
-        setShowUserModal(false);
-      }
-    };
-
-    document.addEventListener('scroll', handleScroll);
-
-    return () => {
-      document.removeEventListener('scroll', handleScroll);
-    };
-  }, [showUserModal]);
+  const handleDelete = async (postId: string) => {
+    await deletePost(postId);
+    navigate('/');
+  };
 
   const handleUserClick = (event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
+    
     const rect = event.currentTarget.getBoundingClientRect();
     setUserModalPosition({
       x: rect.left + rect.width / 2,
-      y: rect.bottom + 10
+      y: rect.bottom + window.scrollY
     });
     setShowUserModal(true);
   };
 
-  const handleDelete = async () => {
-    if (!post) return;
-    
-    try {
-      await deletePost(post.id);
-      navigate('/');
-    } catch (error) {
-      console.error('Error deleting post:', error);
-    }
-  };
-
   const formatDate = (timestamp: any) => {
-    if (!timestamp) return '';
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const date = timestamp && timestamp.toDate ? 
+      timestamp.toDate() : new Date(timestamp);
     return date.toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'long',
@@ -182,6 +145,7 @@ const PostDetail: FC = () => {
   if (error || !post) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
+        <BackButton />
         <div className="bg-red-900/50 border border-red-500 rounded-lg p-8 text-center max-w-md w-full">
           <h2 className="text-2xl font-bold text-red-300 mb-4">Error</h2>
           <p className="text-gray-300 mb-6">{error || 'Post no encontrado'}</p>
@@ -198,8 +162,10 @@ const PostDetail: FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-950">
+      <BackButton />
+      
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <div className="bg-gray-900 rounded-xl shadow-2xl overflow-hidden border border-gray-800">
+        <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-600/30 rounded-2xl overflow-hidden shadow-xl">
           <div className="p-4 sm:p-8">
             <div className="flex items-start space-x-3 sm:space-x-4 mb-4 sm:mb-6 relative">
               <button
@@ -215,21 +181,19 @@ const PostDetail: FC = () => {
               </button>
               
               <div className="flex-1 min-w-0">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
-                  <div className="flex items-center space-x-2 mb-1 sm:mb-0">
-                    <button
-                      onClick={handleUserClick}
-                      className="text-lg sm:text-xl font-bold text-white hover:text-blue-400 transition-colors duration-200 hover:underline truncate"
-                    >
-                      {post.authorDisplayName}
-                    </button>
-                    <div className="flex items-center space-x-2 flex-shrink-0 mt-1 sm:mt-0">
-                      <DefaultBadge badgeId={(authorProfile as any)?.defaultBadgeId} size="sm" />
-                      <UserRoleDisplay userId={post.authorId} size="sm" />
-                    </div>
-                  </div>
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  <button
+                    onClick={handleUserClick}
+                    className="font-semibold text-white hover:text-emerald-400 transition-colors duration-200 hover:underline text-sm sm:text-base"
+                  >
+                    {post.authorDisplayName}
+                  </button>
+                  
+                  <DefaultBadge badgeId={(authorProfile as any)?.defaultBadgeId} />
+                  <UserRoleDisplay userId={post.authorId} />
                 </div>
-                <p className="text-gray-400 text-sm sm:text-base">@{post.authorUsername}</p>
+                
+                <p className="text-gray-400 text-xs sm:text-sm">@{post.authorUsername}</p>
                 <p className="text-gray-500 text-xs sm:text-sm">{formatDate(post.createdAt)}</p>
               </div>
 

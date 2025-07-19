@@ -32,9 +32,12 @@ const BadgeList: FC<BadgeListProps> = ({ userId, size = 'md', maxDisplay, classN
 
   if (loading) {
     return (
-      <div className={`flex space-x-1 ${className}`}>
+      <div className={`flex flex-wrap gap-2 ${className}`}>
         {[...Array(2)].map((_, index) => (
-          <div key={index} className={`${size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-6 h-6' : 'w-8 h-8'} bg-gray-700 rounded-full animate-pulse`}></div>
+          <div 
+            key={index} 
+            className={`${size === 'sm' ? 'w-4 h-4' : size === 'md' ? 'w-6 h-6' : 'w-8 h-8'} bg-gray-700 rounded-full animate-pulse`}
+          />
         ))}
       </div>
     );
@@ -46,16 +49,17 @@ const BadgeList: FC<BadgeListProps> = ({ userId, size = 'md', maxDisplay, classN
   const remainingCount = maxDisplay && badges.length > maxDisplay ? badges.length - maxDisplay : 0;
 
   return (
-    <div className={`flex items-center space-x-1 ${className}`}>
+    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
       {displayBadges.map((userBadge) => (
-        <Badge
-          key={userBadge.badgeId}
-          badge={userBadge.badge}
-          size={size}
-        />
+        <div key={userBadge.badgeId} className="flex-shrink-0">
+          <Badge
+            badge={userBadge.badge}
+            size={size}
+          />
+        </div>
       ))}
       {remainingCount > 0 && (
-        <span className="text-xs text-gray-400 ml-1">+{remainingCount}</span>
+        <span className="text-xs text-gray-400 flex-shrink-0">+{remainingCount}</span>
       )}
     </div>
   );

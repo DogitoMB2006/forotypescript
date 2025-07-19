@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getUserProfile } from '../../services/userService';
 import { getUserCustomTheme } from '../../services/profileThemeService';
 import { getUserBadges } from '../../services/badgeService';
@@ -22,6 +23,7 @@ const UserModalPostcard: FC<UserModalPostcardProps> = ({
   onClose,
   anchorPosition
 }) => {
+  const navigate = useNavigate();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userTheme, setUserTheme] = useState<CustomProfileTheme | null>(null);
   const [userBadges, setUserBadges] = useState<UserBadgeWithDetails[]>([]);
@@ -53,6 +55,9 @@ const UserModalPostcard: FC<UserModalPostcardProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
+    let lastScrollY = window.scrollY;
+    const scrollThreshold = 150; // pixels de scroll para cerrar
+
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (!target.closest('.user-modal-postcard')) {
@@ -66,12 +71,23 @@ const UserModalPostcard: FC<UserModalPostcardProps> = ({
       }
     };
 
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      const scrollDifference = Math.abs(currentScrollY - lastScrollY);
+      
+      if (scrollDifference > scrollThreshold) {
+        onClose();
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleEscape);
+    window.addEventListener('scroll', handleScroll, { passive: true });
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('scroll', handleScroll);
     };
   }, [isOpen, onClose]);
 
@@ -96,7 +112,7 @@ const UserModalPostcard: FC<UserModalPostcardProps> = ({
 
   const handleProfileClick = () => {
     if (userProfile?.uid) {
-      window.open(`/perfil/${userProfile.uid}`, '_blank');
+      navigate(`/perfil/${userProfile.uid}`);
       onClose();
     }
   };
@@ -236,7 +252,7 @@ const UserModalPostcard: FC<UserModalPostcardProps> = ({
                   </p>
                 </div>
 
-                
+                {/* Badges como en Discord */}
                 {userBadges.length > 0 && (
                   <div className="mb-4">
                     <div className="flex flex-wrap gap-1">

@@ -41,8 +41,10 @@ const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }
     window.location.reload();
   };
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('es-ES', {
+  const formatDate = (date: Date | any) => {
+    if (!date) return '';
+    const actualDate = date.toDate ? date.toDate() : new Date(date);
+    return actualDate.toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'long'
     });
@@ -83,18 +85,18 @@ const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }
       >
         <div className="absolute inset-0 bg-black/20" />
         
-        <div className="absolute bottom-0 left-0 right-0 p-6">
+        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6">
           <div className="relative">
             {profile.profileImageUrl ? (
               <img
                 src={profile.profileImageUrl}
                 alt={profile.displayName}
-                className="w-32 h-32 rounded-full object-cover shadow-xl transition-all duration-300"
+                className="w-24 h-24 sm:w-32 sm:h-32 rounded-full object-cover shadow-xl transition-all duration-300"
                 style={getProfileImageStyle()}
               />
             ) : (
               <div 
-                className="w-32 h-32 rounded-full flex items-center justify-center shadow-xl text-white text-4xl font-bold transition-all duration-300"
+                className="w-24 h-24 sm:w-32 sm:h-32 rounded-full flex items-center justify-center shadow-xl text-white text-2xl sm:text-4xl font-bold transition-all duration-300"
                 style={{
                   background: `linear-gradient(135deg, ${accentColor}, ${primaryColor})`,
                   ...getProfileImageStyle()
@@ -108,18 +110,18 @@ const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }
       </div>
       
       <div
-        className="px-6 pt-20 pb-6"
+        className="px-4 sm:px-6 pt-16 sm:pt-20 pb-6"
         style={{
           backgroundColor: primaryColor,
           backgroundImage: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
           color: textColor
         }}
       >
-        <div className="flex items-start justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-4 sm:space-y-0">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center space-x-3 mb-2">
+            <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-3 mb-2">
               <h1 
-                className="text-3xl font-bold transition-colors duration-300 text-white"
+                className="text-2xl sm:text-3xl font-bold transition-colors duration-300 text-white"
               >
                 {profile.displayName}
               </h1>
@@ -133,31 +135,37 @@ const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }
               Se unió en {formatDate(profile.createdAt)}
             </p>
 
-            <div>
-              <BadgeList userId={profile.uid} size="md" />
+            {/* Badges responsive */}
+            <div className="mb-4 sm:mb-0">
+              <BadgeList 
+                userId={profile.uid} 
+                size="md" 
+                className="flex-wrap gap-2" 
+              />
             </div>
           </div>
           
-          <div className="flex items-center space-x-3 ml-6">
+          <div className="flex flex-row sm:flex-col lg:flex-row items-center justify-center sm:justify-start space-x-3 sm:space-x-0 sm:space-y-3 lg:space-y-0 lg:space-x-3 sm:ml-6">
             {isOwnProfile && (
               <button
                 onClick={onEdit}
-                className="flex items-center space-x-2 px-6 py-3 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 border bg-white/10 border-white/20 text-white hover:bg-white/20"
+                className="flex items-center space-x-2 px-4 sm:px-6 py-2 sm:py-3 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 border bg-white/10 border-white/20 text-white hover:bg-white/20 text-sm sm:text-base"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                <span>Editar perfil</span>
+                <span className="hidden sm:inline">Editar perfil</span>
+                <span className="sm:hidden">Editar</span>
               </button>
             )}
 
             {canShowSelfBadgeManager && (
               <button
                 onClick={() => setShowSelfBadgeManager(true)}
-                className="p-3 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 border bg-purple-600/20 border-purple-600/40 text-purple-300 hover:bg-purple-600/30"
+                className="p-2 sm:p-3 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 border bg-purple-600/20 border-purple-600/40 text-purple-300 hover:bg-purple-600/30"
                 title="Asignar todos los badges"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </button>
@@ -166,10 +174,10 @@ const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }
             {canShowModerationPanel && (
               <button
                 onClick={() => setShowModerationPanel(true)}
-                className="p-3 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 border bg-red-600/20 border-red-600/40 text-red-300 hover:bg-red-600/30"
+                className="p-2 sm:p-3 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 border bg-red-600/20 border-red-600/40 text-red-300 hover:bg-red-600/30"
                 title="Panel de moderación"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.962-.833-2.732 0L3.732 16.5C2.962 18.333 3.924 20 5.464 20z" />
                 </svg>
               </button>
