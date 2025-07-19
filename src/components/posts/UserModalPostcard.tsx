@@ -2,9 +2,11 @@ import type { FC } from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { getUserProfile } from '../../services/userService';
 import { getUserCustomTheme } from '../../services/profileThemeService';
+import { getUserBadges } from '../../services/badgeService';
 import type { UserProfile } from '../../services/userService';
 import type { CustomProfileTheme } from '../../types/profileTheme';
-import BadgeList from '../user/BadgeList';
+import type { UserBadgeWithDetails } from '../../types/badge';
+import Badge from '../user/Badge';
 
 interface UserModalPostcardProps {
   userId: string;
@@ -22,6 +24,7 @@ const UserModalPostcard: FC<UserModalPostcardProps> = ({
 }) => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userTheme, setUserTheme] = useState<CustomProfileTheme | null>(null);
+  const [userBadges, setUserBadges] = useState<UserBadgeWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -29,12 +32,14 @@ const UserModalPostcard: FC<UserModalPostcardProps> = ({
     if (isOpen && userId) {
       const fetchProfile = async () => {
         try {
-          const [profile, theme] = await Promise.all([
+          const [profile, theme, badges] = await Promise.all([
             getUserProfile(userId),
-            getUserCustomTheme(userId)
+            getUserCustomTheme(userId),
+            getUserBadges(userId)
           ]);
           setUserProfile(profile);
           setUserTheme(theme);
+          setUserBadges(badges);
         } catch (error) {
           console.error('Error fetching user profile:', error);
         } finally {
@@ -133,8 +138,8 @@ const UserModalPostcard: FC<UserModalPostcardProps> = ({
     left = Math.max(minLeft, Math.min(left, maxLeft));
     
     let top = anchorPosition.y + 10;
-    if (top + 400 > window.innerHeight) {
-      top = anchorPosition.y - 410;
+    if (top + 450 > window.innerHeight) {
+      top = anchorPosition.y - 460;
     }
     
     return {
@@ -160,96 +165,131 @@ const UserModalPostcard: FC<UserModalPostcardProps> = ({
             </div>
           </div>
         ) : userProfile ? (
-          <div
-            className="rounded-2xl shadow-2xl w-80 max-w-[90vw] overflow-hidden animate-in fade-in-0 slide-in-from-top-2 duration-200 border-2 mx-auto"
+          <div 
+            className="rounded-2xl shadow-2xl w-80 max-w-[90vw] border overflow-hidden mx-auto"
             style={{
               backgroundColor: primaryColor,
-              backgroundImage: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
-              borderColor: accentColor,
-              boxShadow: `0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px ${accentColor}40`
+              borderColor: accentColor
             }}
           >
-            <div className="relative">
-              <div
-                className="h-24 sm:h-32"
-                style={{
-                  backgroundImage: userProfile.bannerImageUrl
-                    ? `url(${userProfile.bannerImageUrl})`
-                    : `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center'
-                }}
-              />
-              
-              <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2">
-                <div className="relative">
+            <div
+              className="h-24 relative"
+              style={{
+                background: userProfile.bannerImageUrl
+                  ? `url(${userProfile.bannerImageUrl})`
+                  : `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat'
+              }}
+            >
+              <div className="absolute inset-0 bg-black/20" />
+            </div>
+            
+            <div className="px-4 pt-2">
+              <div className="relative -top-12 flex justify-start -mb-8">
+                {userProfile.profileImageUrl ? (
                   <img
-                    src={userProfile.profileImageUrl || '/default-avatar.png'}
+                    src={userProfile.profileImageUrl}
                     alt={userProfile.displayName}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 object-cover shadow-lg"
-                    style={{ borderColor: accentColor }}
+                    className="w-20 h-20 rounded-full object-cover shadow-xl transition-all duration-300"
+                    style={{
+                      border: `4px solid ${primaryColor}`,
+                      boxShadow: `0 0 0 2px ${accentColor}40`
+                    }}
                   />
-                  <div className="absolute -bottom-1 -right-1">
-                    <BadgeList userId={userId} size="sm" maxDisplay={1} />
+                ) : (
+                  <div 
+                    className="w-20 h-20 rounded-full flex items-center justify-center shadow-xl text-white text-2xl font-bold transition-all duration-300"
+                    style={{
+                      background: `linear-gradient(135deg, ${accentColor}, ${primaryColor})`,
+                      border: `4px solid ${primaryColor}`,
+                      boxShadow: `0 0 0 2px ${accentColor}40`
+                    }}
+                  >
+                    {userProfile.displayName?.charAt(0).toUpperCase()}
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
-            <div className="pt-10 sm:pt-12 px-4 sm:px-6 pb-4 sm:pb-6">
-              <div className="text-center">
-                <h3 
-                  className="text-lg sm:text-xl font-bold mb-1" 
-                  style={{ color: isLightColor(primaryColor) ? 'rgba(0,0,0,0.9)' : 'rgba(255,255,255,0.9)' }}
-                >
-                  {userProfile.displayName}
-                </h3>
-                
-                <p 
-                  className="text-sm mb-3" 
-                  style={{ color: isLightColor(primaryColor) ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)' }}
-                >
-                  @{userProfile.username}
-                </p>
+            <div 
+              className="p-4 relative -mt-2"
+              style={{
+                backgroundColor: primaryColor,
+                color: isLightColor(primaryColor) ? '#000000' : '#FFFFFF'
+              }}
+            >
+              <div className="relative z-10 -mt-2">
+                <div className="mb-3">
+                  <h3 
+                    className="font-bold text-lg leading-tight"
+                    style={{ color: isLightColor(primaryColor) ? '#000000' : '#FFFFFF' }}
+                  >
+                    {userProfile.displayName}
+                  </h3>
+                  <p 
+                    className="text-sm"
+                    style={{ color: isLightColor(primaryColor) ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }}
+                  >
+                    @{userProfile.username}
+                  </p>
+                </div>
+
+                {/* Badges como en Discord */}
+                {userBadges.length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex flex-wrap gap-1">
+                      {userBadges.map((userBadge) => (
+                        <div
+                          key={userBadge.badgeId}
+                          className="relative group"
+                        >
+                          <Badge 
+                            badge={userBadge.badge} 
+                            size="md" 
+                            showTooltip={true}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {userProfile.bio && (
                   <p 
-                    className="text-sm mb-3 leading-relaxed" 
-                    style={{ color: isLightColor(primaryColor) ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }}
+                    className="text-sm leading-relaxed mb-4"
+                    style={{ color: isLightColor(primaryColor) ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.8)' }}
                   >
                     {userProfile.bio}
                   </p>
                 )}
 
                 <p 
-                  className="mb-3 sm:mb-4 text-xs" 
+                  className="mb-4 text-xs"
                   style={{ color: isLightColor(primaryColor) ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)' }}
                 >
                   Se unió en {formatDate(userProfile.createdAt)}
                 </p>
 
-                <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="flex items-center space-x-3">
                   <button
                     onClick={handleProfileClick}
-                    disabled={!userProfile?.uid}
-                    className="flex-1 text-center py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 transform hover:scale-105 text-white border disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 text-center py-2.5 px-4 rounded-lg text-sm font-medium transition-all duration-200 transform hover:scale-105 text-white border border-white/20"
                     style={{
-                      background: userProfile?.uid ? `linear-gradient(135deg, ${accentColor}, ${primaryColor})` : '#6b7280',
-                      borderColor: accentColor
+                      background: `linear-gradient(135deg, ${accentColor}, ${primaryColor})`,
+                      boxShadow: `0 4px 12px ${accentColor}30`
                     }}
                   >
-                    Ver perfil
+                    Ver perfil completo
                   </button>
                   <button
                     onClick={onClose}
-                    className="p-2 sm:p-2.5 rounded-lg transition-colors duration-200 border"
+                    className="p-2.5 rounded-lg transition-colors duration-200 border border-white/20 hover:bg-white/10"
+                    style={{ color: isLightColor(primaryColor) ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)' }}
                     title="Cerrar"
-                    style={{
-                      borderColor: accentColor + '40',
-                      color: isLightColor(primaryColor) ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)'
-                    }}
                   >
-                    <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -258,10 +298,14 @@ const UserModalPostcard: FC<UserModalPostcardProps> = ({
             </div>
           </div>
         ) : (
-          <div className="rounded-2xl shadow-2xl w-80 max-w-[90vw] h-96 bg-red-900/50 border border-red-500 flex items-center justify-center mx-auto">
-            <div className="text-center p-6">
-              <h3 className="text-lg font-bold text-red-300 mb-2">Error</h3>
-              <p className="text-red-300">No se pudo cargar el perfil</p>
+          <div className="rounded-2xl shadow-2xl w-80 max-w-[90vw] h-96 bg-slate-800 border border-slate-600 flex items-center justify-center mx-auto">
+            <div className="text-center">
+              <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5C2.962 18.333 3.924 20 5.464 20z" />
+                </svg>
+              </div>
+              <p className="text-slate-300 text-sm">Error al cargar el perfil</p>
             </div>
           </div>
         )}

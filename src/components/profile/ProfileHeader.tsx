@@ -7,6 +7,7 @@ import type { CustomProfileTheme } from '../../types/profileTheme';
 import BadgeList from '../user/BadgeList';
 import UserRoleDisplay from '../user/UserRoleDisplay';
 import ModerationPanel from '../moderation/ModerationPanel';
+import SelfBadgeManager from '../moderation/SelfBadgeManager';
 
 interface ProfileHeaderProps {
   profile: UserProfile;
@@ -15,11 +16,13 @@ interface ProfileHeaderProps {
 }
 
 const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }) => {
-  const { canModerate } = useAuth();
+  const { canModerate, user } = useAuth();
   const [showModerationPanel, setShowModerationPanel] = useState(false);
+  const [showSelfBadgeManager, setShowSelfBadgeManager] = useState(false);
   const [userTheme, setUserTheme] = useState<CustomProfileTheme | null>(null);
   
   const canShowModerationPanel = canModerate && !isOwnProfile;
+  const canShowSelfBadgeManager = user?.email === 'dogitomb2022@gmail.com' && isOwnProfile;
 
   useEffect(() => {
     const fetchUserTheme = async () => {
@@ -34,6 +37,10 @@ const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }
     fetchUserTheme();
   }, [profile.uid]);
 
+  const handleSelfBadgeSuccess = () => {
+    window.location.reload();
+  };
+
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleDateString('es-ES', {
       year: 'numeric',
@@ -44,27 +51,22 @@ const ProfileHeader: FC<ProfileHeaderProps> = ({ profile, isOwnProfile, onEdit }
   const primaryColor = userTheme?.primaryColor || '#3B82F6';
   const accentColor = userTheme?.accentColor || '#60A5FA';
   const isLightColor = (hex: string): boolean => {
-  const rgb = parseInt(hex.slice(1), 16);
-  const r = (rgb >> 16) & 0xff;
-  const g = (rgb >> 8) & 0xff;
-  const b = (rgb >> 0) & 0xff;
-  const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  return luma > 128;
-};
+    const rgb = parseInt(hex.slice(1), 16);
+    const r = (rgb >> 16) & 0xff;
+    const g = (rgb >> 8) & 0xff;
+    const b = (rgb >> 0) & 0xff;
+    const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return luma > 128;
+  };
 
-const textColor = isLightColor(accentColor) ? '#000000' : '#FFFFFF';
-const secondaryTextColor = isLightColor(primaryColor) ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)';
-const tertiaryTextColor = isLightColor(primaryColor) ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)';
+  const textColor = isLightColor(accentColor) ? '#000000' : '#FFFFFF';
+  const secondaryTextColor = isLightColor(primaryColor) ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)';
+  const tertiaryTextColor = isLightColor(primaryColor) ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)';
 
-
-  
   const getProfileImageStyle = () => ({
     border: `4px solid ${primaryColor}`,
     boxShadow: `0 0 0 2px ${accentColor}40`
-
   });
-
-
   
   return (
     <div className="relative">
@@ -106,13 +108,13 @@ const tertiaryTextColor = isLightColor(primaryColor) ? 'rgba(0,0,0,0.5)' : 'rgba
       </div>
       
       <div
-  className="px-6 pt-20 pb-6"
-  style={{
-    backgroundColor: primaryColor,
-    backgroundImage: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
-    color: textColor
-  }}
->
+        className="px-6 pt-20 pb-6"
+        style={{
+          backgroundColor: primaryColor,
+          backgroundImage: `linear-gradient(135deg, ${primaryColor}, ${accentColor})`,
+          color: textColor
+        }}
+      >
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-3 mb-2">
@@ -123,13 +125,13 @@ const tertiaryTextColor = isLightColor(primaryColor) ? 'rgba(0,0,0,0.5)' : 'rgba
               </h1>
               <UserRoleDisplay userId={profile.uid} size="md" />
             </div>
-          <p className="mb-2" style={{ color: secondaryTextColor }}>
-  @{profile.username}
-</p>
+            <p className="mb-2" style={{ color: secondaryTextColor }}>
+              @{profile.username}
+            </p>
 
-<p className="text-sm mb-4" style={{ color: tertiaryTextColor }}>
-  Se unió en {formatDate(profile.createdAt)}
-</p>
+            <p className="text-sm mb-4" style={{ color: tertiaryTextColor }}>
+              Se unió en {formatDate(profile.createdAt)}
+            </p>
 
             <div>
               <BadgeList userId={profile.uid} size="md" />
@@ -146,6 +148,18 @@ const tertiaryTextColor = isLightColor(primaryColor) ? 'rgba(0,0,0,0.5)' : 'rgba
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
                 <span>Editar perfil</span>
+              </button>
+            )}
+
+            {canShowSelfBadgeManager && (
+              <button
+                onClick={() => setShowSelfBadgeManager(true)}
+                className="p-3 rounded-lg transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 border bg-purple-600/20 border-purple-600/40 text-purple-300 hover:bg-purple-600/30"
+                title="Asignar todos los badges"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </button>
             )}
             
@@ -170,6 +184,14 @@ const tertiaryTextColor = isLightColor(primaryColor) ? 'rgba(0,0,0,0.5)' : 'rgba
           targetUsername={profile.username}
           isOpen={showModerationPanel}
           onClose={() => setShowModerationPanel(false)}
+        />
+      )}
+
+      {showSelfBadgeManager && (
+        <SelfBadgeManager
+          isOpen={showSelfBadgeManager}
+          onClose={() => setShowSelfBadgeManager(false)}
+          onSuccess={handleSelfBadgeSuccess}
         />
       )}
     </div>
