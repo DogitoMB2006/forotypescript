@@ -2,6 +2,7 @@ import { collection, addDoc, query, where, getDocs, doc, updateDoc, deleteDoc } 
 import { db } from '../firebase/config';
 import type { Badge, UserBadge, UserBadgeWithDetails } from '../types/badge';
 
+
 const AVAILABLE_BADGES: Badge[] = [
   {
     id: 'zaza',
@@ -26,6 +27,14 @@ const AVAILABLE_BADGES: Badge[] = [
     iconUrl: 'https://cdn3.emoji.gg/emojis/1503-moderator-badge.png',
     rarity: 'epic',
     category: 'staff'
+  },
+  {
+    id: 'dp',
+    name: 'DP',
+    description: 'Badge especial de Deadpool',
+    iconUrl: 'https://i.imgur.com/uWJYCpu.png',
+    rarity: 'legendary',
+    category: 'special'
   }
 ];
 

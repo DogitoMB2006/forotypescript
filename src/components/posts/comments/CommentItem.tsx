@@ -24,7 +24,14 @@ interface CommentItemProps {
   level?: number;
 }
 
-const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, onCommentUpdated, onReplyAdded, level = 0 }) => {
+const CommentItem: FC<CommentItemProps> = ({ 
+  comment, 
+  postId, 
+  onCommentDeleted, 
+  onCommentUpdated, 
+  onReplyAdded, 
+  level = 0 
+}) => {
   const { user, hasPermission } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -165,11 +172,23 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
     );
   }
 
+  // Mejorado sistema de márgenes responsive para anidación
   const getMarginClass = () => {
     if (level === 0) return '';
-    if (level === 1) return 'ml-3 sm:ml-6 md:ml-8';
-    if (level === 2) return 'ml-6 sm:ml-12 md:ml-16';
-    return 'ml-8 sm:ml-16 md:ml-20';
+    
+    // Mobile first approach
+    const baseMargin = 'border-l-2 border-gray-700 pl-2 ml-2';
+    
+    switch (level) {
+      case 1:
+        return `${baseMargin} sm:ml-4 sm:pl-4 md:ml-6 md:pl-6 lg:ml-8 lg:pl-8`;
+      case 2:
+        return `${baseMargin} sm:ml-6 sm:pl-6 md:ml-10 md:pl-10 lg:ml-12 lg:pl-12`;
+      case 3:
+        return `${baseMargin} sm:ml-8 sm:pl-8 md:ml-12 md:pl-12 lg:ml-16 lg:pl-16`;
+      default:
+        return `${baseMargin} sm:ml-10 sm:pl-10 md:ml-16 md:pl-16 lg:ml-20 lg:pl-20`;
+    }
   };
 
   const getDeleteButtonStyle = () => {
@@ -190,65 +209,86 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
     <>
       <div 
         id={`comment-${comment.id}`}
-        className={`bg-gray-800 border border-gray-700 rounded-lg p-3 sm:p-4 hover:border-gray-600 transition-colors duration-200 ${getMarginClass()} scroll-mt-24 group`}
+        className={`
+          bg-gray-800/90 border border-gray-700/60 rounded-lg transition-all duration-200 
+          hover:border-gray-600 hover:bg-gray-800 scroll-mt-24 group
+          ${getMarginClass()}
+          p-2.5 sm:p-3
+        `}
       >
-        <div className="flex items-start space-x-2 sm:space-x-3">
-          <Avatar 
-            src={authorProfile?.profileImageUrl}
-            name={comment.authorDisplayName}
-            size="md"
-            className="flex-shrink-0 mt-0.5"
-          />
+        {/* Header móvil optimizado - compacto */}
+        <div className="flex items-start gap-2">
+          {/* Avatar responsive - más pequeño y pegado */}
+          <div className="flex-shrink-0">
+            <Avatar 
+              src={authorProfile?.profileImageUrl}
+              name={comment.authorDisplayName}
+              size="sm"
+              className="w-7 h-7 sm:w-9 sm:h-9"
+            />
+          </div>
           
-          <div className="flex-1 min-w-0 overflow-hidden">
-            <div className="flex items-start justify-between mb-2 gap-2">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 min-w-0 flex-1">
-                <div className="flex items-center space-x-2 min-w-0">
+          {/* Contenido principal - sin overflow hidden que empuja */}
+          <div className="flex-1 min-w-0">
+            {/* Header info - más compacto */}
+            <div className="flex items-start justify-between gap-2 mb-1.5">
+              {/* User info y metadata - en línea siempre */}
+              <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                {/* Username y badges en una línea */}
+                <div className="flex items-center gap-1.5 min-w-0">
                   <ClickableUsername
                     userId={comment.authorId}
                     username={comment.authorUsername}
                     displayName={comment.authorDisplayName}
-                    className="font-medium text-white hover:text-blue-400 text-sm sm:text-base truncate max-w-[120px] sm:max-w-none"
+                    className="font-medium text-white hover:text-blue-400 text-sm sm:text-base truncate"
                   >
                     <span className="sm:hidden">
-                      {truncateName(comment.authorDisplayName, 12)}
+                      {truncateName(comment.authorDisplayName, 14)}
                     </span>
                     <span className="hidden sm:inline">
-                      {truncateName(comment.authorDisplayName, 20)}
+                      {truncateName(comment.authorDisplayName, 22)}
                     </span>
                   </ClickableUsername>
-                  <div className="flex items-center space-x-1 flex-shrink-0">
+                  
+                  {/* Badges - más compactos */}
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
                     <DefaultBadge badgeId={(authorProfile as any)?.defaultBadgeId} size="sm" />
                     <UserRoleDisplay userId={comment.authorId} size="sm" />
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-1 sm:space-x-2 text-gray-500 text-xs sm:text-sm mt-0.5 sm:mt-0">
-                  <span className="hidden sm:inline text-gray-500">
-                    @{comment.authorUsername.length > 15 ? comment.authorUsername.substring(0, 15) + '...' : comment.authorUsername}
+                {/* Metadata compacta */}
+                <div className="flex items-center gap-1 text-gray-500 text-xs">
+                  <span className="text-gray-400">
+                    @{comment.authorUsername.length > 10 ? 
+                      comment.authorUsername.substring(0, 10) + '...' : 
+                      comment.authorUsername}
                   </span>
-                  <span className="hidden sm:inline">•</span>
-                  <span className="whitespace-nowrap">{formatTimeAgo(comment.createdAt)}</span>
+                  <span>•</span>
+                  <span>{formatTimeAgo(comment.createdAt)}</span>
                   {comment.updatedAt && comment.updatedAt !== comment.createdAt && (
                     <>
                       <span>•</span>
-                      <span className="text-xs">(editado)</span>
+                      <span className="opacity-75">(editado)</span>
                     </>
                   )}
                 </div>
               </div>
               
-              <div className="flex items-center space-x-1 flex-shrink-0">
+              {/* Action buttons - más compactos */}
+              <div className="flex items-center gap-0.5 flex-shrink-0 self-start">
+                {/* Moderación badge */}
                 {canDeleteComment && !isAuthor && (
-                  <div className="px-1.5 py-0.5 bg-red-900/30 border border-red-500/50 rounded text-red-400 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <div className="px-1 py-0.5 bg-red-900/30 border border-red-500/50 rounded text-red-400 text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     Mod
                   </div>
                 )}
                 
+                {/* Edit button */}
                 {canEditComment && (
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="text-gray-500 hover:text-blue-400 p-1.5 rounded transition-colors duration-200 hover:bg-blue-900/20 opacity-0 group-hover:opacity-100"
+                    className="text-gray-500 hover:text-blue-400 p-1 rounded transition-colors duration-200 hover:bg-blue-900/20 opacity-0 group-hover:opacity-100 touch-manipulation"
                     title="Editar comentario"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -257,10 +297,11 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
                   </button>
                 )}
                 
+                {/* Delete button */}
                 {canDeleteComment && (
                   <button
                     onClick={handleDeleteClick}
-                    className={`p-1.5 rounded transition-colors duration-200 opacity-0 group-hover:opacity-100 ${getDeleteButtonStyle()}`}
+                    className={`p-1 rounded transition-colors duration-200 opacity-0 group-hover:opacity-100 touch-manipulation ${getDeleteButtonStyle()}`}
                     title={getDeleteButtonTitle()}
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -271,12 +312,13 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
               </div>
             </div>
             
+            {/* Content section - más compacto */}
             {comment.audioUrl ? (
-              <div className="mb-3">
+              <div className="mb-2">
                 <AudioPlayer audioUrl={comment.audioUrl} />
               </div>
             ) : comment.content && (
-              <div className="text-gray-200 text-sm sm:text-base leading-relaxed mb-3">
+              <div className="text-gray-200 text-sm sm:text-base leading-relaxed mb-2">
                 <div className="break-words overflow-wrap-anywhere">
                   {shouldTruncate ? (
                     <>
@@ -285,7 +327,7 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
                       </span>
                       <button
                         onClick={() => setShowFullContent(true)}
-                        className="text-blue-400 hover:text-blue-300 text-sm ml-1 font-medium"
+                        className="text-blue-400 hover:text-blue-300 text-sm ml-1 font-medium touch-manipulation"
                       >
                         Ver más
                       </button>
@@ -298,7 +340,7 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
                       {isContentLong && showFullContent && (
                         <button
                           onClick={() => setShowFullContent(false)}
-                          className="text-blue-400 hover:text-blue-300 text-sm ml-1 font-medium"
+                          className="text-blue-400 hover:text-blue-300 text-sm ml-1 font-medium touch-manipulation"
                         >
                           Ver menos
                         </button>
@@ -309,28 +351,32 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
               </div>
             )}
             
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <button className="flex items-center space-x-1 text-gray-500 hover:text-red-400 transition-colors duration-200 py-1 px-2 rounded-lg hover:bg-red-900/20">
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Action buttons - más compactos */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Like button */}
+              <button className="flex items-center gap-1 text-gray-500 hover:text-red-400 transition-colors duration-200 py-1 px-1.5 rounded hover:bg-red-900/20 touch-manipulation min-w-0">
+                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
-                <span className="text-xs sm:text-sm">{comment.likes}</span>
+                <span className="text-xs sm:text-sm">{comment.likes || 0}</span>
               </button>
               
+              {/* Reply button */}
               <button 
                 onClick={() => setShowReplyForm(!showReplyForm)}
-                className="flex items-center space-x-1 text-gray-500 hover:text-blue-400 transition-colors duration-200 py-1 px-2 rounded-lg hover:bg-blue-900/20"
+                className="flex items-center gap-1 text-gray-500 hover:text-blue-400 transition-colors duration-200 py-1 px-1.5 rounded hover:bg-blue-900/20 touch-manipulation min-w-0"
               >
-                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                 </svg>
-                <span className="text-xs sm:text-sm">Responder</span>
+                <span className="text-xs sm:text-sm hidden xs:inline">Responder</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Reply form */}
       {showReplyForm && (
         <div className={`mt-2 ${getMarginClass()}`}>
           <ReplyComment
@@ -342,8 +388,9 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
         </div>
       )}
 
+      {/* Nested replies */}
       {comment.replies && comment.replies.length > 0 && (
-        <div className="mt-3 space-y-3">
+        <div className="mt-2 space-y-2">
           {comment.replies.map(reply => (
             <CommentItem
               key={reply.id}
@@ -358,30 +405,31 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
         </div>
       )}
 
+      {/* Permission error modal */}
       {permissionError && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900 border border-red-500 rounded-xl shadow-2xl w-full max-w-md p-6">
+          <div className="bg-gray-900 border border-red-500 rounded-xl shadow-2xl w-full max-w-md p-4 sm:p-6">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-red-600 rounded-full flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold text-white">Permisos Insuficientes</h3>
-                <p className="text-sm text-red-300">{permissionError}</p>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base sm:text-lg font-semibold text-white">Permisos Insuficientes</h3>
+                <p className="text-xs sm:text-sm text-red-300 break-words">{permissionError}</p>
               </div>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
               <button
                 onClick={() => setPermissionError('')}
-                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg font-medium transition-colors duration-200"
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 px-4 rounded-lg font-medium transition-colors duration-200 text-sm sm:text-base touch-manipulation"
               >
                 Cancelar
               </button>
               <button
                 onClick={() => window.location.reload()}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition-colors duration-200"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors duration-200 text-sm sm:text-base touch-manipulation"
               >
                 Refrescar Página
               </button>
@@ -390,6 +438,7 @@ const CommentItem: FC<CommentItemProps> = ({ comment, postId, onCommentDeleted, 
         </div>
       )}
 
+      {/* Delete modal */}
       <DeleteComment
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
