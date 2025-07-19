@@ -35,6 +35,14 @@ const AVAILABLE_BADGES: Badge[] = [
     iconUrl: 'https://i.imgur.com/uWJYCpu.png',
     rarity: 'legendary',
     category: 'special'
+  },
+   {
+    id: 'Dev',
+    name: 'Developer',
+    description: 'Developer badge!',
+    iconUrl: 'https://img.icons8.com/fluent/512/discord-early-verified-bot-developer-badge.png',
+    rarity: 'legendary',
+    category: 'special'
   }
 ];
 
