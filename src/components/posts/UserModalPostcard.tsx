@@ -236,7 +236,7 @@ const UserModalPostcard: FC<UserModalPostcardProps> = ({
                   </p>
                 </div>
 
-                {/* Badges como en Discord */}
+                
                 {userBadges.length > 0 && (
                   <div className="mb-4">
                     <div className="flex flex-wrap gap-1">
