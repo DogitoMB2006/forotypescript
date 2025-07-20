@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { deletePost } from '../../services/postService';
 import { getCommentCount } from '../../services/commentService';
@@ -23,6 +23,7 @@ interface PostCardProps {
 
 const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
   const { user, hasPermission } = useAuth();
+  const location = useLocation();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
   const [authorProfile, setAuthorProfile] = useState<UserProfile | null>(null);
@@ -82,8 +83,7 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
             href={part} 
             target="_blank" 
             rel="noopener noreferrer"
-            className="text-emerald-400 hover:text-emerald-300 underline transition-colors duration-200"
-            onClick={(e) => e.stopPropagation()}
+            className="text-blue-400 hover:text-blue-300 underline transition-colors duration-200"
           >
             {part}
           </a>
@@ -93,23 +93,10 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
     });
   };
 
-  const handleUserClick = (event: React.MouseEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    const rect = event.currentTarget.getBoundingClientRect();
-    setUserModalPosition({
-      x: rect.left + rect.width / 2,
-      y: rect.bottom + 10
-    });
-    setShowUserModal(true);
-  };
-
-  const handleDelete = async () => {
+  const handleDelete = async (postId: string) => {
     try {
-      await deletePost(post.id);
-      if (onPostDeleted) {
-        onPostDeleted(post.id);
-      }
+      await deletePost(postId);
+      onPostDeleted?.(postId);
     } catch (error) {
       console.error('Error deleting post:', error);
     }
@@ -117,25 +104,39 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
 
   const handleDeleteClick = async () => {
     if (!canDeletePost) {
-      setPermissionError('No tienes permisos para eliminar esta publicación');
-      return;
-    }
-
-    if (!isAuthor) {
-      try {
-        const hasPermissionResult = await userHasPermission(user!.uid, 'delete', 'posts');
-        if (!hasPermissionResult) {
-          setPermissionError('No tienes permisos para realizar esta acción de moderación');
+      if (!user) {
+        setPermissionError('Debes iniciar sesión para eliminar posts.');
+        return;
+      }
+      
+      if (!isAuthor) {
+        try {
+          const hasModerationPermission = await userHasPermission(user.uid, 'delete', 'posts');
+          if (!hasModerationPermission) {
+            setPermissionError('No tienes permisos para eliminar este post. Contacta a un moderador si crees que este contenido viola las reglas de la comunidad.');
+            return;
+          }
+        } catch (error) {
+          console.error('Error checking permissions:', error);
+          setPermissionError('Error al verificar permisos. Intenta refrescar la página.');
           return;
         }
-      } catch (error) {
-        console.error('Error checking permissions:', error);
-        setPermissionError('Error al verificar permisos. Intenta refrescar la página.');
-        return;
       }
     }
 
     setShowDeleteModal(true);
+  };
+
+  const handleUserClick = (event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const rect = event.currentTarget.getBoundingClientRect();
+    setUserModalPosition({
+      x: rect.left + rect.width / 2,
+      y: rect.bottom + window.scrollY
+    });
+    setShowUserModal(true);
   };
 
   const getDeleteButtonStyle = () => {
@@ -149,10 +150,29 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
     return isAuthor ? 'Eliminar publicación' : 'Eliminar publicación (Moderación)';
   };
 
+
+
   return (
     <>
-      <article className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-600/30 rounded-2xl overflow-hidden hover:border-emerald-500/30 transition-all duration-300 group shadow-xl hover:shadow-2xl hover:shadow-emerald-500/10">
-        <Link to={`/post/${post.id}`} className="block">
+      <article 
+        className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-600/30 rounded-2xl overflow-hidden hover:border-emerald-500/30 transition-all duration-300 group shadow-xl hover:shadow-2xl hover:shadow-emerald-500/10"
+        data-post-id={post.id}
+      >
+        <Link 
+          to={`/post/${post.id}`} 
+          className="block"
+          state={{
+            fromHome: location.pathname === '/',
+            scrollPosition: (() => {
+              const postElement = document.querySelector(`[data-post-id="${post.id}"]`);
+              if (postElement) {
+                const rect = postElement.getBoundingClientRect();
+                return window.scrollY + rect.top - 100;
+              }
+              return window.scrollY;
+            })()
+          }}
+        >
           <div className="p-4 sm:p-6">
             <div className="flex items-start space-x-3 sm:space-x-4 mb-4 sm:mb-6 relative">
               <button
@@ -197,7 +217,7 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
                         e.stopPropagation();
                         handleDeleteClick();
                       }}
-                      className={`p-1 sm:p-2 rounded-lg transition-all duration-200 opacity-0 group-hover:opacity-100 flex-shrink-0 ${getDeleteButtonStyle()}`}
+                      className={`p-1 sm:p-2 rounded-lg transition-all duration-200 ${getDeleteButtonStyle()}`}
                       title={getDeleteButtonTitle()}
                     >
                       <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,15 +228,22 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
                 )}
               </div>
             </div>
-            
-            <h2 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4 group-hover:text-emerald-400 transition-colors duration-200 line-clamp-2">
+
+            <h2 className="text-lg sm:text-xl font-bold text-white mb-3 sm:mb-4 leading-tight group-hover:text-emerald-300 transition-colors duration-200">
               {post.title}
             </h2>
             
-            <div className="text-slate-300 mb-4 sm:mb-6 line-clamp-3 leading-relaxed text-sm sm:text-base">
-              {processContent(post.content)}
+            <div className="text-slate-300 text-sm sm:text-base leading-relaxed mb-4 sm:mb-6 line-clamp-4 group-hover:text-slate-200 transition-colors duration-200">
+              {post.content.length > 300 ? (
+                <>
+                  {processContent(post.content.substring(0, 300))}
+                  <span className="text-emerald-400 font-medium">... Leer más</span>
+                </>
+              ) : (
+                processContent(post.content)
+              )}
             </div>
-            
+
             {post.imageUrls && post.imageUrls.length > 0 && (
               <div className="mb-4 sm:mb-6">
                 {post.imageUrls.length === 1 ? (
@@ -266,6 +293,17 @@ const PostCard: FC<PostCardProps> = ({ post, onPostDeleted }) => {
               <Link 
                 to={`/post/${post.id}#comments`}
                 className="flex items-center space-x-1 sm:space-x-2 text-slate-400 hover:text-emerald-400 transition-colors duration-200 py-2 px-3 rounded-lg hover:bg-emerald-900/20"
+                state={{
+                  fromHome: location.pathname === '/',
+                  scrollPosition: (() => {
+                    const postElement = document.querySelector(`[data-post-id="${post.id}"]`);
+                    if (postElement) {
+                      const rect = postElement.getBoundingClientRect();
+                      return window.scrollY + rect.top - 100;
+                    }
+                    return window.scrollY;
+                  })()
+                }}
               >
                 <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />

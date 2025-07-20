@@ -1,5 +1,6 @@
 import type { FC } from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import CreatePost from '../../components/posts/CreatePost';
 import FloatingCreateButton from '../../components/ui/FloatingCreateButton';
 import PostsList from '../../components/posts/PostsList';
@@ -9,6 +10,24 @@ import { useNewPostListener } from '../../hooks/useNewPostListener';
 const Home: FC = () => {
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
   const { hasNewPosts, markAsRead } = useNewPostListener();
+  const location = useLocation();
+
+  useEffect(() => {
+    const state = location.state as { preserveScroll?: boolean; targetScrollPosition?: number } | null;
+    
+    console.log('Home mounted with state:', state);
+    
+    if (state?.preserveScroll && typeof state.targetScrollPosition === 'number') {
+      console.log('Restaurando scroll a:', state.targetScrollPosition);
+      const scrollPos = state.targetScrollPosition;
+      setTimeout(() => {
+        window.scrollTo(0, scrollPos);
+        console.log('Scroll restaurado a:', scrollPos);
+      }, 150);
+      
+      window.history.replaceState(null, '', '/');
+    }
+  }, [location.state]);
 
   const handlePostCreated = () => {
     setIsCreatePostOpen(false);

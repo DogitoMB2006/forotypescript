@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface BackButtonProps {
   className?: string;
@@ -13,11 +13,25 @@ const BackButton: FC<BackButtonProps> = ({
   variant = 'floating'
 }) => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleBack = () => {
-    if (window.history.length > 1) {
+    const state = location.state as { fromHome?: boolean; scrollPosition?: number } | null;
+    
+    console.log('BackButton state:', state);
+    
+    if (state?.fromHome && typeof state.scrollPosition === 'number') {
+      console.log('Navegando al home con scroll:', state.scrollPosition);
+      const scrollPos = state.scrollPosition;
+      navigate('/', { 
+        replace: true,
+        state: { preserveScroll: true, targetScrollPosition: scrollPos }
+      });
+    } else if (window.history.length > 1) {
+      console.log('Navegando hacia atrás');
       navigate(-1);
     } else {
+      console.log('Navegando al home sin scroll');
       navigate('/');
     }
   };
