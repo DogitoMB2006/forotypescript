@@ -1,5 +1,6 @@
 import type { FC } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { X, MessageCircle, MessageSquare, Heart, AtSign } from 'lucide-react';
 import type { NotificationToast } from '../../types/notification';
 import Avatar from './Avatar';
 
@@ -11,109 +12,167 @@ interface ToastNotificationProps {
 const ToastNotification: FC<ToastNotificationProps> = ({ toast, onClose }) => {
   const navigate = useNavigate();
 
-  if (!toast || !toast.id) {
-    return null;
-  }
-
   const handleClick = () => {
-    try {
-      if (toast.postId) {
-        if (toast.commentId) {
-          navigate(`/post/${toast.postId}#comment-${toast.commentId}`);
-        } else {
-          navigate(`/post/${toast.postId}`);
-        }
-        onClose();
+    // Redireccionar según el tipo de notificación
+    if (toast.type === 'message' && toast.chatId) {
+      navigate(`/chats/${toast.chatId}`);
+    } else if (toast.postId) {
+      if (toast.commentId) {
+        navigate(`/post/${toast.postId}#comment-${toast.commentId}`);
+      } else {
+        navigate(`/post/${toast.postId}`);
       }
-    } catch (error) {
-      console.error('Error navigating:', error);
-      onClose();
     }
+    onClose();
   };
 
   const getIcon = () => {
     switch (toast.type) {
+      case 'message':
+        return <MessageCircle className="w-5 h-5 text-emerald-400" />;
       case 'comment':
-        return (
-          <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-          </svg>
-        );
+        return <MessageSquare className="w-5 h-5 text-blue-400" />;
       case 'reply':
-        return (
-          <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-          </svg>
-        );
+        return <MessageSquare className="w-5 h-5 text-green-400" />;
       case 'like':
-        return (
-          <svg className="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-          </svg>
-        );
+        return <Heart className="w-5 h-5 text-red-400" />;
       case 'mention':
-        return (
-          <svg className="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-        );
+        return <AtSign className="w-5 h-5 text-purple-400" />;
       default:
-        return (
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v5m0 0h5m-5 0l5-5" />
-          </svg>
-        );
+        return <MessageCircle className="w-5 h-5 text-gray-400" />;
     }
   };
 
-  const getDisplayName = () => {
-    if (toast.message && typeof toast.message === 'string') {
-      const parts = toast.message.split(' ');
-      return parts[0] || 'Usuario';
+  const getBorderColor = () => {
+    switch (toast.type) {
+      case 'message':
+        return 'border-l-emerald-500';
+      case 'comment':
+        return 'border-l-blue-500';
+      case 'reply':
+        return 'border-l-green-500';
+      case 'like':
+        return 'border-l-red-500';
+      case 'mention':
+        return 'border-l-purple-500';
+      default:
+        return 'border-l-gray-500';
     }
-    return 'Usuario';
+  };
+
+  const formatTime = () => {
+    const now = new Date();
+    const diff = now.getTime() - toast.timestamp.getTime();
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 1) return 'Ahora';
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+    return toast.timestamp.toLocaleDateString();
   };
 
   return (
-    <div 
-      className="bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-3 sm:p-4 cursor-pointer hover:bg-gray-750 transition-all duration-200 transform hover:scale-105 min-w-0 max-w-sm"
+    <div
       onClick={handleClick}
+      className={`
+        relative bg-gray-900 border border-gray-700 ${getBorderColor()} border-l-4
+        rounded-lg shadow-2xl p-4 cursor-pointer
+        transform transition-all duration-300 hover:scale-105 hover:shadow-xl
+        backdrop-blur-sm max-w-sm w-full
+        animate-in slide-in-from-right-2 duration-300
+      `}
     >
-      <div className="flex items-start space-x-3">
-        <div className="flex-shrink-0 relative">
-          <Avatar 
-            src={toast.avatar || undefined}
-            name={getDisplayName()}
-            size="md"
-          />
-          <div className="absolute -bottom-1 -right-1 bg-gray-800 rounded-full p-1">
-            {getIcon()}
-          </div>
+      {/* Botón de cerrar */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-800 transition-colors"
+      >
+        <X className="w-4 h-4 text-gray-400 hover:text-white" />
+      </button>
+
+      <div className="flex items-start space-x-3 pr-6">
+        {/* Avatar o icono */}
+        <div className="flex-shrink-0 pt-1">
+          {toast.avatar ? (
+            <Avatar
+              src={toast.avatar}
+              alt={toast.title}
+              name={toast.title}
+              size="sm"
+            />
+          ) : (
+            <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center">
+              {getIcon()}
+            </div>
+          )}
         </div>
-        
+
+        {/* Contenido */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <h4 className="text-sm font-semibold text-white truncate">
-              {toast.title || 'Notificación'}
+              {toast.title}
             </h4>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onClose();
-              }}
-              className="text-gray-400 hover:text-white ml-2 flex-shrink-0"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+              {formatTime()}
+            </span>
           </div>
-          <p className="text-sm text-gray-300 line-clamp-2 break-words">
-            {toast.message || 'Nueva notificación'}
+          
+          <p className="text-sm text-gray-300 break-words line-clamp-2">
+            {toast.message}
           </p>
-          <p className="text-xs text-gray-500 mt-1">Hace un momento</p>
+
+          {/* Indicador del tipo de notificación */}
+          <div className="flex items-center mt-2">
+            <div className="flex items-center space-x-1">
+              {getIcon()}
+              <span className="text-xs text-gray-400 capitalize">
+                {toast.type === 'message' ? 'Mensaje' : 
+                 toast.type === 'comment' ? 'Comentario' :
+                 toast.type === 'reply' ? 'Respuesta' :
+                 toast.type === 'like' ? 'Me gusta' :
+                 toast.type === 'mention' ? 'Mención' : 'Notificación'}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Barra de progreso para auto-cerrado */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gray-800 rounded-b-lg overflow-hidden">
+        <div 
+          className={`h-full ${
+            toast.type === 'message' ? 'bg-emerald-500' :
+            toast.type === 'comment' ? 'bg-blue-500' :
+            toast.type === 'reply' ? 'bg-green-500' :
+            toast.type === 'like' ? 'bg-red-500' :
+            toast.type === 'mention' ? 'bg-purple-500' : 'bg-gray-500'
+          } animate-shrink origin-left`}
+          style={{ 
+            animation: 'shrink 5s linear forwards'
+          }}
+        />
+      </div>
+
+      <style>{`
+        @keyframes shrink {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+        .animate-shrink {
+          animation: shrink 5s linear forwards;
+        }
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      `}</style>
     </div>
   );
 };

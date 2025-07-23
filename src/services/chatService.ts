@@ -15,8 +15,9 @@ import {
   increment
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
+import { createNotification } from './notificationService';
+import { showChatNotification, showInAppNotification } from './chatNotificationService';
 import type { ChatMessage, ChatPreview } from '../types/chat';
-
 
 interface UserProfile {
   uid: string;
@@ -40,8 +41,6 @@ export const sendMessage = async (
   fileUrl?: string
 ): Promise<string> => {
   try {
-    console.log('ChatService: Sending message', { chatId, senderId, content, type });
-    
     const batch = writeBatch(db);
     
     const messageData = {
@@ -59,9 +58,7 @@ export const sendMessage = async (
       updatedAt: serverTimestamp()
     };
 
-    console.log('ChatService: Message data:', messageData);
     const messageRef = await addDoc(collection(db, 'messages'), messageData);
-    console.log('ChatService: Message created with ID:', messageRef.id);
     
     const chatRef = doc(db, 'chats', chatId);
     const chatDoc = await getDoc(chatRef);
@@ -84,7 +81,41 @@ export const sendMessage = async (
       });
       
       await batch.commit();
-      console.log('ChatService: Chat updated with last message');
+
+      if (otherUserId) {
+        try {
+          await createNotification({
+            userId: otherUserId,
+            type: 'message',
+            title: `Nuevo mensaje de ${senderProfile.displayName}`,
+            message: type === 'text' ? content : type === 'image' ? '📷 Envió una imagen' : '🎵 Envió un mensaje de voz',
+            triggeredByUserId: senderId,
+            triggeredByUsername: senderProfile.username,
+            triggeredByDisplayName: senderProfile.displayName,
+            triggeredByProfileImage: senderProfile.profileImageUrl,
+            data: {
+              chatId: chatId,
+              senderId: senderId,
+              messageType: type
+            }
+          });
+
+          const chatNotificationData = {
+            chatId,
+            senderId,
+            senderUsername: senderProfile.username,
+            senderDisplayName: senderProfile.displayName,
+            senderProfileImage: senderProfile.profileImageUrl,
+            content,
+            type
+          };
+
+          await showChatNotification(chatNotificationData, otherUserId);
+          showInAppNotification(chatNotificationData);
+        } catch (notificationError) {
+          console.error('ChatService: Error sending notifications:', notificationError);
+        }
+      }
     }
     
     return messageRef.id;
@@ -111,7 +142,6 @@ export const getUserChats = async (userId: string): Promise<ChatPreview[]> => {
       const otherUserDetails = chatData.participantDetails[otherUserId];
       
       if (!otherUserDetails) {
-        console.warn('ChatService: Missing participant details for:', otherUserId);
         continue;
       }
       
@@ -195,8 +225,6 @@ export const markMessagesAsRead = async (chatId: string, userId: string) => {
 
 export const editMessage = async (messageId: string, newContent: string): Promise<void> => {
   try {
-    console.log('ChatService: Editing message', messageId, 'with content:', newContent);
-    
     const messageRef = doc(db, 'messages', messageId);
     await updateDoc(messageRef, {
       content: newContent,
@@ -204,8 +232,6 @@ export const editMessage = async (messageId: string, newContent: string): Promis
       editedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
-    
-    console.log('ChatService: Message edited successfully');
   } catch (error) {
     console.error('Error editing message:', error);
     throw error;
@@ -214,33 +240,49 @@ export const editMessage = async (messageId: string, newContent: string): Promis
 
 export const deleteMessage = async (messageId: string): Promise<void> => {
   try {
-    console.log('ChatService: Deleting message', messageId);
-    
     const messageRef = doc(db, 'messages', messageId);
     const messageDoc = await getDoc(messageRef);
     
     if (messageDoc.exists()) {
       const messageData = messageDoc.data();
       
-     
       if (messageData.fileUrl) {
         try {
           const { deleteChatFile } = await import('./chatFileService');
           await deleteChatFile(messageData.fileUrl);
-          console.log('ChatService: Associated file deleted');
         } catch (fileError) {
           console.error('Error deleting associated file:', fileError);
-        
         }
       }
       
-   
       await deleteDoc(messageRef);
-      console.log('ChatService: Message deleted successfully');
     }
   } catch (error) {
     console.error('Error deleting message:', error);
     throw error;
+  }
+};
+
+export const findExistingChat = async (userId1: string, userId2: string): Promise<string | null> => {
+  try {
+    const q = query(
+      collection(db, 'chats'),
+      where('participants', 'array-contains', userId1)
+    );
+    
+    const querySnapshot = await getDocs(q);
+    
+    for (const docSnapshot of querySnapshot.docs) {
+      const chatData = docSnapshot.data();
+      if (chatData.participants.includes(userId2)) {
+        return docSnapshot.id;
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error finding existing chat:', error);
+    return null;
   }
 };
 
@@ -251,17 +293,11 @@ export const createChat = async (
   otherUserProfile: { id: string; username: string; displayName: string; profileImageUrl?: string }
 ): Promise<string> => {
   try {
-    console.log('ChatService: Creating chat between', currentUserId, 'and', otherUserId);
-    console.log('ChatService: Current user profile:', currentUserProfile);
-    console.log('ChatService: Other user profile:', otherUserProfile);
-    
     const existingChatId = await findExistingChat(currentUserId, otherUserId);
     if (existingChatId) {
-      console.log('ChatService: Found existing chat:', existingChatId);
       return existingChatId;
     }
 
-    console.log('ChatService: Creating new chat...');
     const chatData = {
       participants: [currentUserId, otherUserId],
       participantDetails: {
@@ -289,61 +325,31 @@ export const createChat = async (
       updatedAt: serverTimestamp()
     };
 
-    console.log('ChatService: Chat data to create:', chatData);
-    const docRef = await addDoc(collection(db, 'chats'), chatData);
-    console.log('ChatService: Chat created with ID:', docRef.id);
-    return docRef.id;
+    const chatRef = await addDoc(collection(db, 'chats'), chatData);
+    return chatRef.id;
   } catch (error) {
     console.error('Error creating chat:', error);
     throw error;
   }
 };
 
-export const findExistingChat = async (userId1: string, userId2: string): Promise<string | null> => {
-  try {
-    const q = query(
-      collection(db, 'chats'),
-      where('participants', 'array-contains', userId1)
-    );
-    
-    const querySnapshot = await getDocs(q);
-    
-    for (const docSnapshot of querySnapshot.docs) {
-      const chat = docSnapshot.data();
-      if (chat.participants.includes(userId2)) {
-        return docSnapshot.id;
-      }
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Error finding existing chat:', error);
-    return null;
-  }
-};
-
 export const subscribeToUserChats = (userId: string, callback: (chats: ChatPreview[]) => void) => {
-  console.log('ChatService: Setting up subscription for user:', userId);
-  
   const q = query(
     collection(db, 'chats'),
     where('participants', 'array-contains', userId),
     orderBy('lastMessageAt', 'desc')
   );
 
-  return onSnapshot(q, async (querySnapshot) => {
-    console.log('ChatService: Snapshot received, docs:', querySnapshot.docs.length);
+  return onSnapshot(q, (querySnapshot) => {
     const chats: ChatPreview[] = [];
     
     for (const docSnapshot of querySnapshot.docs) {
       const chatData = docSnapshot.data();
-      console.log('ChatService: Processing chat:', docSnapshot.id, chatData);
       
       const otherUserId = chatData.participants.find((id: string) => id !== userId);
       const otherUserDetails = chatData.participantDetails[otherUserId];
       
       if (!otherUserDetails) {
-        console.warn('ChatService: Missing participant details for:', otherUserId);
         continue;
       }
       
@@ -370,10 +376,6 @@ export const subscribeToUserChats = (userId: string, callback: (chats: ChatPrevi
       chats.push(chatPreview);
     }
     
-    console.log('ChatService: Final chats processed:', chats.length);
     callback(chats);
-  }, (error) => {
-    console.error('ChatService: Subscription error:', error);
-    callback([]);
   });
 };

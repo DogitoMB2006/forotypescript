@@ -3,7 +3,6 @@ import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/f
 import { db } from '../firebase/config';
 import { useAuth } from './useAuth';
 import { useNotifications } from '../contexts/NotificationContext';
-import { createNotification } from '../services/notificationService';
 import { notificationPermissionService } from '../services/notificationPermissionService';
 import type { ChatMessage } from '../types/chat';
 
@@ -16,11 +15,12 @@ export const useChatNotifications = () => {
   useEffect(() => {
     if (!user?.uid) return;
 
+    // Escuchar todos los mensajes nuevos donde el usuario no es el remitente
     const q = query(
       collection(db, 'messages'),
       where('senderId', '!=', user.uid),
       orderBy('createdAt', 'desc'),
-      limit(1)
+      limit(5) // Aumentamos el límite para capturar más mensajes
     );
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
@@ -32,8 +32,19 @@ export const useChatNotifications = () => {
       for (const change of snapshot.docChanges()) {
         if (change.type === 'added') {
           const messageData = change.doc.data() as ChatMessage;
-          const messageTime = messageData.createdAt?.getTime() || 0;
+          
+          // Fix: Properly handle Firebase timestamp
+          let createdAt: Date;
+          if (messageData.createdAt && typeof messageData.createdAt === 'object' && 'toDate' in messageData.createdAt) {
+            createdAt = (messageData.createdAt as any).toDate();
+          } else if (messageData.createdAt instanceof Date) {
+            createdAt = messageData.createdAt;
+          } else {
+            createdAt = new Date();
+          }
+          const messageTime = createdAt.getTime();
 
+          // Solo procesar mensajes más nuevos que el último timestamp
           if (messageTime > lastMessageTimestamp.current) {
             lastMessageTimestamp.current = messageTime;
 
@@ -41,10 +52,12 @@ export const useChatNotifications = () => {
             const isInSameChat = currentPath === `/chats/${messageData.chatId}`;
             const isVisible = document.visibilityState === 'visible';
 
+            // No mostrar notificación si está en el mismo chat y la ventana es visible
             if (isInSameChat && isVisible) {
               continue;
             }
 
+            // Preparar contenido del mensaje
             let messageContent = '';
             switch (messageData.type) {
               case 'text':
@@ -60,28 +73,14 @@ export const useChatNotifications = () => {
                 messageContent = 'Nuevo mensaje';
             }
 
+            // Truncar contenido si es muy largo
             if (messageContent.length > 100) {
               messageContent = messageContent.substring(0, 97) + '...';
             }
 
-            await createNotification({
-              userId: user.uid,
-              type: 'message',
-              title: `Mensaje de ${messageData.senderDisplayName}`,
-              message: messageContent,
-              triggeredByUserId: messageData.senderId,
-              triggeredByUsername: messageData.senderUsername,
-              triggeredByDisplayName: messageData.senderDisplayName,
-              triggeredByProfileImage: messageData.senderProfileImage,
-              data: {
-                chatId: messageData.chatId,
-                messageId: messageData.id,
-                messageType: messageData.type
-              }
-            });
-
+            // Crear toast in-app
             const toast = {
-              id: `chat-${Date.now()}`,
+              id: `chat-${messageData.chatId}-${Date.now()}`,
               type: 'message' as const,
               title: messageData.senderDisplayName,
               message: messageContent,
@@ -92,6 +91,7 @@ export const useChatNotifications = () => {
 
             addToast(toast);
 
+            // Mostrar notificación del navegador si tiene permisos
             if (notificationPermissionService.getPermissionStatus() === 'granted') {
               try {
                 const notification = new Notification(messageData.senderDisplayName, {
@@ -105,10 +105,12 @@ export const useChatNotifications = () => {
 
                 notification.onclick = () => {
                   window.focus();
+                  // Usar router navigation en lugar de location.href para mejor UX
                   window.location.href = `/chats/${messageData.chatId}`;
                   notification.close();
                 };
 
+                // Auto-close después de 5 segundos
                 setTimeout(() => {
                   notification.close();
                 }, 5000);
@@ -116,15 +118,22 @@ export const useChatNotifications = () => {
                 console.error('Error showing browser notification:', error);
               }
             }
+
+            console.log('Chat notification processed:', {
+              chatId: messageData.chatId,
+              sender: messageData.senderDisplayName,
+              content: messageContent
+            });
           }
         }
       }
     });
 
     return () => unsubscribe();
-  }, [user?.uid]);
+  }, [user?.uid, addToast]);
 };
 
+// Hook específico para notificaciones en una sala de chat específica
 export const useChatRoomNotifications = (chatId: string | undefined) => {
   const { user } = useAuth();
   const lastMessageTimestamp = useRef<number>(Date.now());
@@ -132,6 +141,10 @@ export const useChatRoomNotifications = (chatId: string | undefined) => {
 
   useEffect(() => {
     if (!chatId || !user?.uid) return;
+
+    // Reset when chatId changes
+    isInitialLoad.current = true;
+    lastMessageTimestamp.current = Date.now();
 
     const q = query(
       collection(db, 'messages'),
@@ -152,6 +165,7 @@ export const useChatRoomNotifications = (chatId: string | undefined) => {
           const messageData = change.doc.data() as ChatMessage;
           const messageTime = messageData.createdAt?.getTime() || 0;
 
+          // Solo mostrar notificaciones si la ventana no está visible
           if (messageTime > lastMessageTimestamp.current && document.visibilityState !== 'visible') {
             lastMessageTimestamp.current = messageTime;
 
@@ -174,6 +188,7 @@ export const useChatRoomNotifications = (chatId: string | undefined) => {
               messageContent = messageContent.substring(0, 97) + '...';
             }
 
+            // Solo notificación del navegador para mensajes en chats específicos cuando no está visible
             if (notificationPermissionService.getPermissionStatus() === 'granted') {
               try {
                 const notification = new Notification(messageData.senderDisplayName, {
@@ -206,4 +221,3 @@ export const useChatRoomNotifications = (chatId: string | undefined) => {
     return () => unsubscribe();
   }, [chatId, user?.uid]);
 };
-

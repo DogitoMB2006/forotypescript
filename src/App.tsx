@@ -5,7 +5,7 @@ import { ChatProvider } from './contexts/ChatContext';
 import { useRoleChangeListener } from './hooks/useRoleChangeListener';
 import { useChatNotifications } from './hooks/useChatNotifications';
 import NotificationPermissionBanner from './components/ui/NotificationPermissionBanner';
-import InAppNotifications from './components/ui/InAppNotifications';
+import ToastContainer from './components/ui/ToastContainer';
 import DevLogModal from './components/moderation/DevLogModal';
 import DevLogButton from './components/moderation/DevLogButton';
 
@@ -17,7 +17,7 @@ function AppContent() {
     <>
       <NotificationPermissionBanner />
       <RouterProvider router={router} />
-      <InAppNotifications />
+      <ToastContainer />
       <DevLogModal />
       <DevLogButton />
     </>
