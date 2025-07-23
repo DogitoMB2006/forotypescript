@@ -90,21 +90,46 @@ const VoiceCall = ({
       initializeOutgoingCall();
     }
 
-    return () => {
+    // Mostrar loading mientras esperamos autenticación
+  if (!user?.uid) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
+        <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full mx-4 text-center">
+          <div className="mb-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <h2 className="text-xl font-bold text-white mb-2">Preparando llamada...</h2>
+            <p className="text-gray-400">Verificando autenticación</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return () => {
       console.log('VoiceCall: Component unmounting');
       cleanup();
     };
   }, []);
 
   const initializeOutgoingCall = async () => {
+    if (!user?.uid) {
+      console.error('VoiceCall: No user authenticated');
+      alert('Debes estar logueado para hacer llamadas');
+      onCallEnd();
+      return;
+    }
+
     try {
       console.log('VoiceCall: Starting outgoing call');
       setCallStatus('connecting');
       
+      console.log('VoiceCall: Step 1 - Initializing WebRTC');
       await initializeWebRTC();
+      console.log('VoiceCall: Step 2 - WebRTC initialized successfully');
       
+      console.log('VoiceCall: Step 3 - Creating call document');
       const callDoc = await addDoc(collection(db, 'calls'), {
-        callerId: user!.uid,
+        callerId: user.uid,
         receiverId: otherUser.id,
         chatId: chatId,
         status: 'ringing',
@@ -115,10 +140,12 @@ const VoiceCall = ({
       setCallId(newCallId);
       callDocRef.current = callDoc;
       
-      console.log('VoiceCall: Call document created:', newCallId);
+      console.log('VoiceCall: Step 4 - Call document created:', newCallId);
       setCallStatus('ringing');
       
+      console.log('VoiceCall: Step 5 - Setting up WebRTC connection');
       await handleOutgoingWebRTC(newCallId);
+      console.log('VoiceCall: Step 6 - WebRTC connection setup complete');
 
       onSnapshot(doc(db, 'calls', newCallId), (snapshot) => {
         if (snapshot.exists()) {
@@ -139,6 +166,8 @@ const VoiceCall = ({
 
     } catch (error) {
       console.error('Error initializing outgoing call:', error);
+      console.error('Error details:', error);
+      alert(`Error al iniciar llamada: ${error instanceof Error ? error.message : 'Error desconocido'}`);
       onCallEnd();
     }
   };
@@ -177,26 +206,27 @@ const VoiceCall = ({
     try {
       console.log('VoiceCall: Initializing WebRTC');
       
-      peerConnectionRef.current = new RTCPeerConnection(servers);
+      if (!user?.uid) {
+        throw new Error('Usuario no autenticado');
+      }
       
-      const audioConstraints = {
+      peerConnectionRef.current = new RTCPeerConnection(servers);
+      console.log('VoiceCall: Peer connection created');
+      
+      console.log('VoiceCall: Requesting microphone permission');
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000,
-          channelCount: 1,
-          latency: 0.02,
-          deviceId: currentMicId || 'default'
+          autoGainControl: true
         }, 
         video: false 
-      };
-
-      console.log('VoiceCall: Requesting user media');
-      const stream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+      });
+      
+      console.log('VoiceCall: Got microphone stream');
       localStreamRef.current = stream;
 
-      console.log('VoiceCall: Adding local stream tracks to peer connection');
+      console.log('VoiceCall: Adding tracks to peer connection');
       stream.getTracks().forEach(track => {
         if (peerConnectionRef.current) {
           peerConnectionRef.current.addTrack(track, stream);
@@ -207,6 +237,12 @@ const VoiceCall = ({
       if (localAudioRef.current) {
         localAudioRef.current.srcObject = stream;
         localAudioRef.current.muted = true;
+      }
+
+      console.log('VoiceCall: Setting up event handlers');
+      
+      if (!peerConnectionRef.current) {
+        throw new Error('Peer connection es null después de crear');
       }
 
       peerConnectionRef.current.ontrack = (event) => {
@@ -231,14 +267,14 @@ const VoiceCall = ({
       };
 
       peerConnectionRef.current.onicecandidate = async (event) => {
-        if (event.candidate && callId) {
+        if (event.candidate && callId && user?.uid) {
           console.log('VoiceCall: Sending ICE candidate:', event.candidate.type);
           try {
             await addDoc(collection(db, 'calls', callId, 'candidates'), {
               candidate: event.candidate.candidate,
               sdpMLineIndex: event.candidate.sdpMLineIndex,
               sdpMid: event.candidate.sdpMid,
-              from: user!.uid,
+              from: user.uid,
               timestamp: serverTimestamp()
             });
           } catch (error) {
@@ -296,11 +332,13 @@ const VoiceCall = ({
       
       if (error instanceof Error) {
         if (error.name === 'NotAllowedError') {
-          alert('Se requiere acceso al micrófono para realizar llamadas.');
+          alert('Se requiere acceso al micrófono para realizar llamadas. Por favor, permite el acceso en tu navegador.');
         } else if (error.name === 'NotFoundError') {
-          alert('No se encontró un micrófono.');
+          alert('No se encontró un micrófono en tu dispositivo.');
         } else if (error.name === 'NotReadableError') {
           alert('El micrófono está siendo usado por otra aplicación.');
+        } else {
+          alert(`Error de micrófono: ${error.message}`);
         }
       }
       
