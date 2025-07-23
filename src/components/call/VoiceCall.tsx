@@ -801,20 +801,38 @@ const VoiceCall = ({
           </p>
 
           {callStatus === 'ringing' && isIncoming && (
-            <div className="flex justify-center space-x-6 mb-6">
-              <button
-                onClick={declineCall}
-                className="w-16 h-16 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
-              >
-                <PhoneOff className="w-8 h-8 text-white" />
-              </button>
-              <button
-                onClick={acceptCall}
-                className="w-16 h-16 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center transition-colors"
-              >
-                <Phone className="w-8 h-8 text-white" />
-              </button>
-            </div>
+            <>
+              <div className="flex justify-center space-x-6 mb-6">
+                <button
+                  onClick={declineCall}
+                  className="w-16 h-16 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
+                >
+                  <PhoneOff className="w-8 h-8 text-white" />
+                </button>
+                <button
+                  onClick={acceptCall}
+                  className="w-16 h-16 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center transition-colors"
+                >
+                  <Phone className="w-8 h-8 text-white" />
+                </button>
+              </div>
+              
+              <div className="flex justify-center">
+                <div className="flex items-center space-x-1">
+                  <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center">
+                    <Mic className="w-6 h-6 text-white" />
+                  </div>
+                  
+                  <MicrophoneSelector
+                    onMicrophoneChange={handleMicrophoneChange}
+                    onSpeakerChange={handleSpeakerChange}
+                    currentMicId={currentMicId}
+                    currentSpeakerId={currentSpeakerId}
+                    isDisabled={false}
+                  />
+                </div>
+              </div>
+            </>
           )}
 
           {(callStatus === 'connected' || callStatus === 'connecting' || (callStatus === 'ringing' && !isIncoming)) && (
@@ -835,15 +853,13 @@ const VoiceCall = ({
                   )}
                 </button>
                 
-                {(callStatus === 'connected' || callStatus === 'connecting') && (
-                  <MicrophoneSelector
-                    onMicrophoneChange={handleMicrophoneChange}
-                    onSpeakerChange={handleSpeakerChange}
-                    currentMicId={currentMicId}
-                    currentSpeakerId={currentSpeakerId}
-                    isDisabled={callStatus !== 'connected' && callStatus !== 'connecting'}
-                  />
-                )}
+                <MicrophoneSelector
+                  onMicrophoneChange={handleMicrophoneChange}
+                  onSpeakerChange={handleSpeakerChange}
+                  currentMicId={currentMicId}
+                  currentSpeakerId={currentSpeakerId}
+                  isDisabled={false}
+                />
               </div>
 
               <button

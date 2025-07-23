@@ -1,6 +1,6 @@
 // src/components/call/MicrophoneSelector.tsx
 import { useState, useEffect, useRef } from 'react';
-import { MoreVertical, Mic, Volume2 } from 'lucide-react';
+import { MoreVertical, Mic, Volume2, X } from 'lucide-react';
 
 interface MicrophoneSelectorProps {
   onMicrophoneChange: (deviceId: string) => void;
@@ -26,22 +26,12 @@ const MicrophoneSelector = ({
   const [isOpen, setIsOpen] = useState(false);
   const [audioDevices, setAudioDevices] = useState<AudioDevice[]>([]);
   const [loading, setLoading] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    loadAudioDevices();
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (isOpen) {
+      loadAudioDevices();
+    }
+  }, [isOpen]);
 
   const loadAudioDevices = async () => {
     if (isDisabled) return;
@@ -95,9 +85,9 @@ const MicrophoneSelector = ({
   }
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen(true)}
         disabled={loading}
         className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-700 transition-colors disabled:opacity-50"
         title="Seleccionar dispositivos de audio"
@@ -106,92 +96,106 @@ const MicrophoneSelector = ({
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-800 border border-gray-600 rounded-lg shadow-2xl min-w-64 max-w-80 z-50">
-          <div className="p-3">
-            {loading ? (
-              <div className="text-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto mb-2"></div>
-                <span className="text-sm text-gray-400">Cargando dispositivos...</span>
-              </div>
-            ) : (
-              <>
-                <div className="mb-4">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <Mic className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm font-medium text-white">Micrófono</span>
-                  </div>
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {microphones.length > 0 ? (
-                      microphones.map((mic) => (
-                        <button
-                          key={mic.deviceId}
-                          onClick={() => handleMicrophoneSelect(mic.deviceId)}
-                          className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
-                            currentMicId === mic.deviceId
-                              ? 'bg-blue-600 text-white'
-                              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                          }`}
-                          title={mic.label}
-                        >
-                          <div className="truncate">{mic.label}</div>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="text-gray-500 text-sm px-3 py-2">
-                        No se encontraron micrófonos
-                      </div>
-                    )}
-                  </div>
-                </div>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-gray-900 rounded-xl border border-gray-700 w-full max-w-md max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-gray-700 flex-shrink-0">
+              <h3 className="text-lg font-semibold text-white">Dispositivos de Audio</h3>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="p-1 text-gray-400 hover:text-white rounded-full hover:bg-gray-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-                {onSpeakerChange && (
-                  <div className="mb-3">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Volume2 className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm font-medium text-white">Altavoz</span>
+            <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600 hover:scrollbar-thumb-gray-500">
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3"></div>
+                  <span className="text-sm text-gray-400">Cargando dispositivos...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-6">
+                    <div className="flex items-center space-x-2 mb-3">
+                      <Mic className="w-5 h-5 text-blue-500" />
+                      <span className="text-base font-medium text-white">Micrófono</span>
                     </div>
-                    <div className="space-y-1 max-h-32 overflow-y-auto">
-                      {speakers.length > 0 ? (
-                        speakers.map((speaker) => (
+                    <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600">
+                      {microphones.length > 0 ? (
+                        microphones.map((mic) => (
                           <button
-                            key={speaker.deviceId}
-                            onClick={() => handleSpeakerSelect(speaker.deviceId)}
-                            className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
-                              currentSpeakerId === speaker.deviceId
-                                ? 'bg-blue-600 text-white'
-                                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                            key={mic.deviceId}
+                            onClick={() => handleMicrophoneSelect(mic.deviceId)}
+                            className={`w-full text-left px-4 py-3 rounded-lg text-sm transition-colors border ${
+                              currentMicId === mic.deviceId
+                                ? 'bg-blue-600 text-white border-blue-500'
+                                : 'text-gray-300 hover:bg-gray-800 hover:text-white border-gray-600 hover:border-gray-500'
                             }`}
-                            title={speaker.label}
                           >
-                            <div className="truncate">{speaker.label}</div>
+                            <div className="font-medium truncate">{mic.label}</div>
+                            {currentMicId === mic.deviceId && (
+                              <div className="text-xs text-blue-200 mt-1">✓ Seleccionado</div>
+                            )}
                           </button>
                         ))
                       ) : (
-                        <div className="text-gray-500 text-sm px-3 py-2">
-                          Altavoces no disponibles
+                        <div className="text-gray-500 text-sm px-4 py-3 text-center border border-gray-600 rounded-lg">
+                          No se encontraron micrófonos
                         </div>
                       )}
                     </div>
                   </div>
-                )}
 
-                <div className="pt-3 border-t border-gray-600">
-                  <button
-                    onClick={() => {
-                      loadAudioDevices();
-                    }}
-                    disabled={loading}
-                    className="w-full text-center py-2 text-sm text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-50"
-                  >
-                    Actualizar dispositivos
-                  </button>
-                </div>
-              </>
-            )}
+                  {onSpeakerChange && (
+                    <div className="mb-6">
+                      <div className="flex items-center space-x-2 mb-3">
+                        <Volume2 className="w-5 h-5 text-green-500" />
+                        <span className="text-base font-medium text-white">Altavoz</span>
+                      </div>
+                      <div className="space-y-2 max-h-64 overflow-y-auto scrollbar-thin scrollbar-track-gray-800 scrollbar-thumb-gray-600">
+                        {speakers.length > 0 ? (
+                          speakers.map((speaker) => (
+                            <button
+                              key={speaker.deviceId}
+                              onClick={() => handleSpeakerSelect(speaker.deviceId)}
+                              className={`w-full text-left px-4 py-3 rounded-lg text-sm transition-colors border ${
+                                currentSpeakerId === speaker.deviceId
+                                  ? 'bg-green-600 text-white border-green-500'
+                                  : 'text-gray-300 hover:bg-gray-800 hover:text-white border-gray-600 hover:border-gray-500'
+                              }`}
+                            >
+                              <div className="font-medium truncate">{speaker.label}</div>
+                              {currentSpeakerId === speaker.deviceId && (
+                                <div className="text-xs text-green-200 mt-1">✓ Seleccionado</div>
+                              )}
+                            </button>
+                          ))
+                        ) : (
+                          <div className="text-gray-500 text-sm px-4 py-3 text-center border border-gray-600 rounded-lg">
+                            Altavoces no disponibles
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-4 border-t border-gray-700">
+                    <button
+                      onClick={loadAudioDevices}
+                      disabled={loading}
+                      className="w-full py-3 text-sm text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-50 rounded-lg hover:bg-gray-800 border border-gray-600 hover:border-gray-500"
+                    >
+                      🔄 Actualizar dispositivos
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
