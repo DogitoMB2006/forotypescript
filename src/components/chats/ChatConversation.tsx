@@ -1,5 +1,5 @@
 import type { FC } from 'react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
@@ -24,17 +24,81 @@ const ChatConversation: FC = () => {
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const isAutoScrollEnabled = useRef(true);
+  const lastMessageCount = useRef(0);
+
+
+  const scrollToBottom = useCallback((force = false) => {
+    if (!messagesEndRef.current || !messagesContainerRef.current) return;
+
+    const container = messagesContainerRef.current;
+    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+    
+  
+    if (force || isAutoScrollEnabled.current || isNearBottom) {
+
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ 
+          behavior: force ? 'auto' : 'smooth',
+          block: 'end'
+        });
+      });
+    }
+  }, []);
+
+
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    let scrollTimeout: NodeJS.Timeout;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 50;
+      
+     
+      isAutoScrollEnabled.current = isAtBottom;
+
+     
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        if (isAtBottom) {
+          isAutoScrollEnabled.current = true;
+        }
+      }, 1000);
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, []);
 
   useEffect(() => {
     if (!chatId || !user?.uid) return;
 
     const unsubscribe = getChatMessages(chatId, (newMessages) => {
+      const previousCount = lastMessageCount.current;
+      lastMessageCount.current = newMessages.length;
+      
       setMessages(newMessages);
       setLoading(false);
 
-      setTimeout(() => {
-        scrollToBottom();
-      }, 100);
+    
+      if (newMessages.length > previousCount) {
+       
+        setTimeout(() => {
+          scrollToBottom();
+        }, 50);
+        
+      
+        setTimeout(() => {
+          scrollToBottom();
+        }, 300);
+      }
 
       if (newMessages.length > 0) {
         markMessagesAsRead(chatId, user.uid);
@@ -42,15 +106,17 @@ const ChatConversation: FC = () => {
     });
 
     return unsubscribe;
-  }, [chatId, user?.uid]);
+  }, [chatId, user?.uid, scrollToBottom]);
 
+ 
   useEffect(() => {
-    if (messages.length > 0) {
+    if (messages.length > 0 && loading === false) {
+     
       setTimeout(() => {
-        scrollToBottom();
-      }, 200);
+        scrollToBottom(true); 
+      }, 100);
     }
-  }, [messages.length]);
+  }, [messages.length, loading, scrollToBottom]);
 
   useEffect(() => {
     const loadOtherUserFromChat = async () => {
@@ -114,10 +180,6 @@ const ChatConversation: FC = () => {
     loadOtherUserFromMessages();
   }, [messages, chatId, user?.uid, otherUser]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
   const handleSendMessage = async (
     content: string, 
     type: 'text' | 'image' | 'audio' = 'text', 
@@ -128,6 +190,10 @@ const ChatConversation: FC = () => {
     setSending(true);
     try {
       await sendMessage(chatId, user.uid, userProfile, content, type, fileUrl);
+      
+      setTimeout(() => {
+        scrollToBottom(true);
+      }, 100);
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
@@ -203,13 +269,14 @@ const ChatConversation: FC = () => {
 
   return (
     <div className="h-full flex flex-col bg-gray-950">
-      {/* Header */}
+     
       <ChatHeader otherUser={otherUser} onBack={handleBack} />
 
-      {/* Messages */}
+  
       <div 
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto px-2 py-2 sm:px-4 sm:py-4 space-y-1"
+        style={{ scrollBehavior: 'smooth' }}
       >
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
@@ -253,12 +320,13 @@ const ChatConversation: FC = () => {
                 />
               </div>
             ))}
+           
+            <div ref={messagesEndRef} style={{ height: '1px', width: '100%' }} />
           </>
         )}
-        <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
+  
       <MessageInput
         onSendMessage={handleSendMessage}
         disabled={sending}

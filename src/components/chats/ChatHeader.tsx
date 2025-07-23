@@ -1,7 +1,10 @@
 import type { FC } from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, MoreVertical, Phone, Video } from 'lucide-react';
+import { getUserProfile } from '../../services/userService';
+import type { UserProfile } from '../../services/userService';
 import Avatar from '../ui/Avatar';
+import DefaultBadge from '../user/DefaultBadge';
 import UserModalPostcard from '../posts/UserModalPostcard';
 
 interface ChatHeaderProps {
@@ -19,6 +22,20 @@ interface ChatHeaderProps {
 const ChatHeader: FC<ChatHeaderProps> = ({ otherUser, onBack }) => {
   const [showUserModal, setShowUserModal] = useState(false);
   const [userModalPosition, setUserModalPosition] = useState({ x: 0, y: 0 });
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const profile = await getUserProfile(otherUser.id);
+        setUserProfile(profile);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+
+    fetchUserProfile();
+  }, [otherUser.id]);
 
   const formatLastSeen = (date: Date) => {
     const now = new Date();
@@ -75,9 +92,18 @@ const ChatHeader: FC<ChatHeaderProps> = ({ otherUser, onBack }) => {
               </div>
               
               <div className="flex-1 min-w-0">
-                <h2 className="text-white font-medium truncate">
-                  {otherUser.displayName}
-                </h2>
+                <div className="flex items-center space-x-2">
+                  <h2 className="text-white font-medium truncate">
+                    {otherUser.displayName}
+                  </h2>
+                  {userProfile && (userProfile as any).defaultBadgeId && (
+                    <DefaultBadge 
+                      badgeId={(userProfile as any).defaultBadgeId}
+                      size="sm"
+                      className="flex-shrink-0"
+                    />
+                  )}
+                </div>
                 <p className="text-sm text-gray-400 truncate">
                   {formatLastSeen(otherUser.lastSeen)}
                 </p>

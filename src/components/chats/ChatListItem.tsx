@@ -1,7 +1,11 @@
 import type { FC } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { getUserProfile } from '../../services/userService';
 import type { ChatPreview } from '../../types/chat';
+import type { UserProfile } from '../../services/userService';
 import Avatar from '../ui/Avatar';
+import DefaultBadge from '../user/DefaultBadge';
 
 interface ChatListItemProps {
   chat: ChatPreview;
@@ -9,6 +13,21 @@ interface ChatListItemProps {
 }
 
 const ChatListItem: FC<ChatListItemProps> = ({ chat, currentUserId }) => {
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const profile = await getUserProfile(chat.otherUser.id);
+        setUserProfile(profile);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+
+    fetchUserProfile();
+  }, [chat.otherUser.id]);
+
   const formatTime = (date: Date) => {
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -59,9 +78,18 @@ const ChatListItem: FC<ChatListItemProps> = ({ chat, currentUserId }) => {
       
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
-          <h3 className="text-white font-medium truncate">
-            {chat.otherUser.displayName}
-          </h3>
+          <div className="flex items-center space-x-2">
+            <h3 className="text-white font-medium truncate">
+              {chat.otherUser.displayName}
+            </h3>
+            {userProfile && (userProfile as any).defaultBadgeId && (
+              <DefaultBadge 
+                badgeId={(userProfile as any).defaultBadgeId}
+                size="sm"
+                className="flex-shrink-0"
+              />
+            )}
+          </div>
           {chat.lastMessage && (
             <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
               {formatTime(chat.lastMessage.timestamp)}
