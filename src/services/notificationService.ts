@@ -1,4 +1,4 @@
-import { collection, addDoc, serverTimestamp, query, where, orderBy, getDocs, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, orderBy, getDocs, doc, updateDoc, onSnapshot, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import type { Notification } from '../types/notification';
 
@@ -27,7 +27,8 @@ export const getUserNotifications = async (userId: string): Promise<Notification
     
     return querySnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate() || new Date()
     } as Notification));
   } catch (error) {
     console.error('Error getting notifications:', error);
@@ -46,6 +47,26 @@ export const markNotificationAsRead = async (notificationId: string) => {
   }
 };
 
+export const clearAllNotifications = async (userId: string) => {
+  try {
+    const q = query(
+      collection(db, 'notifications'),
+      where('userId', '==', userId)
+    );
+    const querySnapshot = await getDocs(q);
+    
+    const batch = writeBatch(db);
+    querySnapshot.docs.forEach((docSnapshot) => {
+      batch.delete(docSnapshot.ref);
+    });
+    
+    await batch.commit();
+  } catch (error) {
+    console.error('Error clearing all notifications:', error);
+    throw error;
+  }
+};
+
 export const subscribeToUserNotifications = (userId: string, callback: (notifications: Notification[]) => void) => {
   const q = query(
     collection(db, 'notifications'),
@@ -57,7 +78,8 @@ export const subscribeToUserNotifications = (userId: string, callback: (notifica
   return onSnapshot(q, (querySnapshot) => {
     const notifications = querySnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate() || new Date()
     } as Notification));
     callback(notifications);
   });

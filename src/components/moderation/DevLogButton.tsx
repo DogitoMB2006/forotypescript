@@ -7,7 +7,7 @@ const DevLogButton: FC = () => {
   const { user } = useAuth();
   const [showCreateModal, setShowCreateModal] = useState(false);
 
-  // Solo mostrar para el usuario específico
+
   if (!user || user.email !== 'dogitomb2022@gmail.com') {
     return null;
   }

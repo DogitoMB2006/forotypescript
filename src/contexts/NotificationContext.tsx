@@ -1,7 +1,7 @@
 import type { FC } from 'react';
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { subscribeToUserNotifications } from '../services/notificationService';
+import { getUserNotifications, subscribeToUserNotifications } from '../services/notificationService';
 import { notificationPermissionService } from '../services/notificationPermissionService';
 import type { Notification, NotificationToast } from '../types/notification';
 
@@ -10,6 +10,7 @@ interface NotificationContextType {
   toasts: NotificationToast[];
   addToast: (toast: NotificationToast) => void;
   removeToast: (id: string) => void;
+  refreshNotifications: () => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -45,6 +46,17 @@ export const NotificationProvider: FC<NotificationProviderProps> = ({ children }
     }
   }, []);
 
+  const refreshNotifications = async () => {
+    if (!user?.uid) return;
+    
+    try {
+      const userNotifications = await getUserNotifications(user.uid);
+      setNotifications(userNotifications);
+    } catch (error) {
+      console.error('Error refreshing notifications:', error);
+    }
+  };
+
   useEffect(() => {
     if (!user?.uid) {
       setNotifications([]);
@@ -54,9 +66,11 @@ export const NotificationProvider: FC<NotificationProviderProps> = ({ children }
       return;
     }
 
+    refreshNotifications();
+
     const unsubscribe = subscribeToUserNotifications(user.uid, async (newNotifications) => {
       if (isFirstLoad.current) {
-        setNotifications(newNotifications);
+        setNotifications(prev => [...prev, ...newNotifications]);
         previousNotificationIds.current = newNotifications.map(n => n.id);
         isFirstLoad.current = false;
         return;
@@ -66,58 +80,59 @@ export const NotificationProvider: FC<NotificationProviderProps> = ({ children }
         notification => !previousNotificationIds.current.includes(notification.id)
       );
 
-      setNotifications(newNotifications);
-      previousNotificationIds.current = newNotifications.map(n => n.id);
+      if (reallyNewNotifications.length > 0) {
+        setNotifications(prev => [...reallyNewNotifications, ...prev]);
+        previousNotificationIds.current = [...previousNotificationIds.current, ...reallyNewNotifications.map(n => n.id)];
 
-      for (const notification of reallyNewNotifications) {
-        const toast: NotificationToast = {
-          id: notification.id,
-          type: notification.type,
-          title: getToastTitle(notification.type),
-          message: `${notification.triggeredByDisplayName} ${getToastMessage(notification.type)}`,
-          avatar: notification.triggeredByProfileImage,
-          postId: notification.postId,
-          commentId: notification.commentId,
-          timestamp: new Date()
-        };
-        
-        addToast(toast);
+        for (const notification of reallyNewNotifications) {
+          const toast: NotificationToast = {
+            id: notification.id,
+            type: notification.type,
+            title: getToastTitle(notification.type),
+            message: `${notification.triggeredByDisplayName} ${getToastMessage(notification.type)}`,
+            avatar: notification.triggeredByProfileImage,
+            postId: notification.postId,
+            commentId: notification.commentId,
+            timestamp: new Date()
+          };
+          
+          addToast(toast);
 
-        if (notificationPermissionService.getPermissionStatus() === 'granted') {
-          try {
-            await notificationPermissionService.showNotification({
-              title: toast.title,
-              body: toast.message,
-              icon: toast.avatar || '/favicon.ico',
-              tag: `notification-${notification.id}`,
-              data: {
-                postId: notification.postId,
-                commentId: notification.commentId,
-                notificationId: notification.id
-              }
-            });
-          } catch (error) {
-            console.error('Error showing push notification:', error);
+          if (notificationPermissionService.getPermissionStatus() === 'granted') {
+            try {
+              await notificationPermissionService.showNotification({
+                title: toast.title,
+                body: toast.message,
+                icon: toast.avatar || '/favicon.ico',
+                tag: notification.id,
+                data: {
+                  postId: notification.postId,
+                  commentId: notification.commentId
+                }
+              });
+            } catch (error) {
+              console.error('Error showing browser notification:', error);
+            }
           }
         }
       }
     });
 
-    return () => unsubscribe();
+    return unsubscribe;
   }, [user?.uid]);
 
   const addToast = (toast: NotificationToast) => {
     setToasts(prev => [...prev, toast]);
     setTimeout(() => {
       removeToast(toast.id);
-    }, 3000);
+    }, 5000);
   };
 
   const removeToast = (id: string) => {
     setToasts(prev => prev.filter(toast => toast.id !== id));
   };
 
-  const getToastTitle = (type: string) => {
+  const getToastTitle = (type: Notification['type']): string => {
     switch (type) {
       case 'comment':
         return 'Nuevo comentario';
@@ -128,27 +143,35 @@ export const NotificationProvider: FC<NotificationProviderProps> = ({ children }
       case 'mention':
         return 'Te mencionaron';
       default:
-        return 'Notificación';
+        return 'Nueva notificación';
     }
   };
 
-  const getToastMessage = (type: string) => {
+  const getToastMessage = (type: Notification['type']): string => {
     switch (type) {
       case 'comment':
         return 'comentó en tu post';
       case 'reply':
         return 'respondió a tu comentario';
       case 'like':
-        return 'le gustó tu publicación';
+        return 'le gustó tu post';
       case 'mention':
-        return 'te mencionó';
+        return 'te mencionó en un post';
       default:
-        return 'interactuó contigo';
+        return 'nueva actividad';
     }
   };
 
   return (
-    <NotificationContext.Provider value={{ notifications, toasts, addToast, removeToast }}>
+    <NotificationContext.Provider 
+      value={{ 
+        notifications, 
+        toasts, 
+        addToast, 
+        removeToast,
+        refreshNotifications
+      }}
+    >
       {children}
     </NotificationContext.Provider>
   );
