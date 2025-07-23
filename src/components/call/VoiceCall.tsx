@@ -144,24 +144,32 @@ const VoiceCall = ({
   };
 
   const handleMicrophoneChange = async (deviceId: string) => {
-    setCurrentMicId(deviceId);
-    
-    if (localStreamRef.current && peerConnectionRef.current) {
-      try {
+    try {
+      console.log('VoiceCall: Changing microphone to:', deviceId);
+      setCurrentMicId(deviceId);
+      
+      if (localStreamRef.current && peerConnectionRef.current) {
+        const oldTrack = localStreamRef.current.getAudioTracks()[0];
+        
         const newStream = await navigator.mediaDevices.getUserMedia({
-          audio: { deviceId: { exact: deviceId } },
+          audio: { 
+            deviceId: { exact: deviceId },
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          },
           video: false
         });
         
-        const oldTrack = localStreamRef.current.getAudioTracks()[0];
         const newTrack = newStream.getAudioTracks()[0];
         
         const sender = peerConnectionRef.current.getSenders().find(s => 
           s.track && s.track.kind === 'audio'
         );
         
-        if (sender) {
+        if (sender && newTrack) {
           await sender.replaceTrack(newTrack);
+          console.log('VoiceCall: Audio track replaced successfully');
         }
         
         if (oldTrack) {
@@ -173,21 +181,31 @@ const VoiceCall = ({
         if (localAudioRef.current) {
           localAudioRef.current.srcObject = newStream;
         }
-      } catch (error) {
-        console.error('Error changing microphone:', error);
+        
+        console.log('VoiceCall: Microphone changed successfully');
+      } else {
+        console.log('VoiceCall: Setting microphone for future use');
       }
+    } catch (error) {
+      console.error('Error changing microphone:', error);
+      alert('No se pudo cambiar el micrófono. Verifica que el dispositivo esté disponible.');
     }
   };
 
-  const handleSpeakerChange = (deviceId: string) => {
-    setCurrentSpeakerId(deviceId);
-    
-    if (remoteAudioRef.current && 'setSinkId' in remoteAudioRef.current) {
-      try {
-        (remoteAudioRef.current as any).setSinkId(deviceId);
-      } catch (error) {
-        console.error('Error changing speaker:', error);
+  const handleSpeakerChange = async (deviceId: string) => {
+    try {
+      console.log('VoiceCall: Changing speaker to:', deviceId);
+      setCurrentSpeakerId(deviceId);
+      
+      if (remoteAudioRef.current && 'setSinkId' in remoteAudioRef.current) {
+        await (remoteAudioRef.current as any).setSinkId(deviceId);
+        console.log('VoiceCall: Speaker changed successfully');
+      } else {
+        console.log('VoiceCall: setSinkId not supported on this browser');
       }
+    } catch (error) {
+      console.error('Error changing speaker:', error);
+      alert('No se pudo cambiar el altavoz. Verifica que el dispositivo esté disponible.');
     }
   };
 
@@ -817,12 +835,15 @@ const VoiceCall = ({
                   )}
                 </button>
                 
-                <MicrophoneSelector
-                  onMicrophoneChange={handleMicrophoneChange}
-                  onSpeakerChange={handleSpeakerChange}
-                  currentMicId={currentMicId}
-                  currentSpeakerId={currentSpeakerId}
-                />
+                {(callStatus === 'connected' || callStatus === 'connecting') && (
+                  <MicrophoneSelector
+                    onMicrophoneChange={handleMicrophoneChange}
+                    onSpeakerChange={handleSpeakerChange}
+                    currentMicId={currentMicId}
+                    currentSpeakerId={currentSpeakerId}
+                    isDisabled={callStatus !== 'connected' && callStatus !== 'connecting'}
+                  />
+                )}
               </div>
 
               <button
