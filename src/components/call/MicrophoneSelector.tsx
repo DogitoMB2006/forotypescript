@@ -1,5 +1,5 @@
-// src/components/call/MicrophoneSelector.tsx
-import { useState, useEffect, useRef } from 'react';
+
+import { useState, useEffect/*, useRef*/ } from 'react';
 import { MoreVertical, Mic, Volume2, X } from 'lucide-react';
 
 interface MicrophoneSelectorProps {
