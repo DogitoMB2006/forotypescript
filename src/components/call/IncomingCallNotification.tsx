@@ -1,4 +1,4 @@
-// src/components/call/IncomingCallNotification.tsx
+
 import type { FC } from 'react';
 import { Phone, PhoneOff } from 'lucide-react';
 import Avatar from '../ui/Avatar';
