@@ -203,10 +203,10 @@ const ChatConversation: FC = () => {
 
   return (
     <div className="h-full flex flex-col bg-gray-950">
-      {/* Header */}
-      <ChatHeader otherUser={otherUser} onBack={handleBack} />
+   
+     <ChatHeader otherUser={otherUser} chatId={chatId!} onBack={handleBack} />
 
-      {/* Messages */}
+      
       <div 
         ref={messagesContainerRef}
         className="flex-1 overflow-y-auto px-2 py-2 sm:px-4 sm:py-4 space-y-1"
@@ -258,7 +258,7 @@ const ChatConversation: FC = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
+    
       <MessageInput
         onSendMessage={handleSendMessage}
         disabled={sending}

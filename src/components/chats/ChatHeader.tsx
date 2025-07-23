@@ -1,7 +1,9 @@
+
 import type { FC } from 'react';
 import { useState, useEffect } from 'react';
-import { ArrowLeft, MoreVertical, Phone, Video } from 'lucide-react';
+import { ArrowLeft, MoreVertical, Phone, Video, Users } from 'lucide-react';
 import { getUserProfile } from '../../services/userService';
+import { useCall } from '../../contexts/CallContext';
 import type { UserProfile } from '../../services/userService';
 import Avatar from '../ui/Avatar';
 import DefaultBadge from '../user/DefaultBadge';
@@ -16,13 +18,18 @@ interface ChatHeaderProps {
     isOnline: boolean;
     lastSeen: Date;
   };
+  chatId: string;
   onBack?: () => void;
 }
 
-const ChatHeader: FC<ChatHeaderProps> = ({ otherUser, onBack }) => {
+const ChatHeader: FC<ChatHeaderProps> = ({ otherUser, chatId, onBack }) => {
   const [showUserModal, setShowUserModal] = useState(false);
   const [userModalPosition, setUserModalPosition] = useState({ x: 0, y: 0 });
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isCallButtonActive, setIsCallButtonActive] = useState(false);
+  const [isChannelButtonActive, setIsChannelButtonActive] = useState(false);
+  
+  const { startVoiceCall, startVideoCall, joinVoiceChannel, isInCall, isInChannel } = useCall();
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -59,6 +66,45 @@ const ChatHeader: FC<ChatHeaderProps> = ({ otherUser, onBack }) => {
       y: rect.bottom
     });
     setShowUserModal(true);
+  };
+
+  const handleVoiceCall = () => {
+    if (isInCall || isInChannel) return;
+    
+    setIsCallButtonActive(true);
+    startVoiceCall({
+      id: otherUser.id,
+      username: otherUser.username,
+      displayName: otherUser.displayName,
+      profileImage: otherUser.profileImage
+    }, chatId);
+
+    setTimeout(() => setIsCallButtonActive(false), 300);
+  };
+
+  const handleVideoCall = () => {
+    if (isInCall || isInChannel) return;
+    
+    startVideoCall({
+      id: otherUser.id,
+      username: otherUser.username,
+      displayName: otherUser.displayName,
+      profileImage: otherUser.profileImage
+    }, chatId);
+  };
+
+  const handleJoinVoiceChannel = () => {
+    if (isInCall || isInChannel) return;
+    
+    setIsChannelButtonActive(true);
+    joinVoiceChannel({
+      id: otherUser.id,
+      username: otherUser.username,
+      displayName: otherUser.displayName,
+      profileImage: otherUser.profileImage
+    }, chatId);
+
+    setTimeout(() => setIsChannelButtonActive(false), 300);
   };
 
   return (
@@ -112,12 +158,49 @@ const ChatHeader: FC<ChatHeaderProps> = ({ otherUser, onBack }) => {
           </div>
 
           <div className="flex items-center space-x-1">
-            <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors">
+            <button 
+              onClick={handleVoiceCall}
+              disabled={isInCall || isInChannel}
+              className={`p-2 rounded-full transition-all duration-200 ${
+                isCallButtonActive 
+                  ? 'bg-blue-600 text-white scale-110' 
+                  : isInCall || isInChannel
+                    ? 'text-gray-600 cursor-not-allowed'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+              }`}
+              title="Llamada de voz"
+            >
               <Phone className="w-5 h-5" />
             </button>
-            <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors">
+
+            <button 
+              onClick={handleVideoCall}
+              disabled={isInCall || isInChannel}
+              className={`p-2 rounded-full transition-colors ${
+                isInCall || isInChannel
+                  ? 'text-gray-600 cursor-not-allowed'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
+              }`}
+              title="Videollamada"
+            >
               <Video className="w-5 h-5" />
             </button>
+
+            <button 
+              onClick={handleJoinVoiceChannel}
+              disabled={isInCall || isInChannel}
+              className={`p-2 rounded-full transition-all duration-200 ${
+                isChannelButtonActive 
+                  ? 'bg-green-600 text-white scale-110' 
+                  : isInCall || isInChannel
+                    ? 'text-gray-600 cursor-not-allowed'
+                    : 'text-gray-400 hover:text-white hover:bg-gray-800'
+              }`}
+              title="Unirse al canal de voz"
+            >
+              <Users className="w-5 h-5" />
+            </button>
+
             <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors">
               <MoreVertical className="w-5 h-5" />
             </button>
