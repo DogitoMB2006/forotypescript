@@ -1,7 +1,8 @@
 import type { FC } from 'react';
+import { useState } from 'react';
 import { ArrowLeft, MoreVertical, Phone, Video } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import Avatar from '../ui/Avatar';
+import UserModalPostcard from '../posts/UserModalPostcard';
 
 interface ChatHeaderProps {
   otherUser: {
@@ -16,6 +17,9 @@ interface ChatHeaderProps {
 }
 
 const ChatHeader: FC<ChatHeaderProps> = ({ otherUser, onBack }) => {
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [userModalPosition, setUserModalPosition] = useState({ x: 0, y: 0 });
+
   const formatLastSeen = (date: Date) => {
     const now = new Date();
     const diff = now.getTime() - date.getTime();
@@ -31,60 +35,78 @@ const ChatHeader: FC<ChatHeaderProps> = ({ otherUser, onBack }) => {
     return `Visto ${date.toLocaleDateString()}`;
   };
 
+  const handleUserClick = (event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setUserModalPosition({
+      x: rect.left + rect.width / 2,
+      y: rect.bottom
+    });
+    setShowUserModal(true);
+  };
+
   return (
-    <div className="bg-gray-900 border-b border-gray-800 px-4 py-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          {/* Back button (mobile) */}
-          <button
-            onClick={onBack}
-            className="lg:hidden p-2 text-gray-400 hover:text-white transition-colors -ml-2"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+    <>
+      <div className="bg-gray-900 border-b border-gray-800 px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="lg:hidden p-2 text-gray-400 hover:text-white transition-colors -ml-2"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            )}
 
-          {/* User info */}
-          <Link 
-            to={`/perfil/${otherUser.username}`}
-            className="flex items-center space-x-3 hover:bg-gray-800/50 rounded-lg p-2 -m-2 transition-colors"
-          >
-            <div className="relative">
-              <Avatar
-                src={otherUser.profileImage}
-                alt={otherUser.displayName}
-                name={otherUser.displayName}
-                size="md"
-              />
-              {otherUser.isOnline && (
-                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full"></div>
-              )}
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              <h2 className="text-white font-medium truncate">
-                {otherUser.displayName}
-              </h2>
-              <p className="text-sm text-gray-400 truncate">
-                {formatLastSeen(otherUser.lastSeen)}
-              </p>
-            </div>
-          </Link>
-        </div>
+            <button 
+              onClick={handleUserClick}
+              className="flex items-center space-x-3 hover:bg-gray-800/50 rounded-lg p-2 -m-2 transition-colors"
+            >
+              <div className="relative">
+                <Avatar
+                  src={otherUser.profileImage}
+                  alt={otherUser.displayName}
+                  name={otherUser.displayName}
+                  size="md"
+                />
+                {otherUser.isOnline && (
+                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-gray-900 rounded-full"></div>
+                )}
+              </div>
+              
+              <div className="flex-1 min-w-0">
+                <h2 className="text-white font-medium truncate">
+                  {otherUser.displayName}
+                </h2>
+                <p className="text-sm text-gray-400 truncate">
+                  {formatLastSeen(otherUser.lastSeen)}
+                </p>
+              </div>
+            </button>
+          </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center space-x-1">
-          <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors">
-            <Phone className="w-5 h-5" />
-          </button>
-          <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors">
-            <Video className="w-5 h-5" />
-          </button>
-          <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors">
-            <MoreVertical className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-1">
+            <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors">
+              <Phone className="w-5 h-5" />
+            </button>
+            <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors">
+              <Video className="w-5 h-5" />
+            </button>
+            <button className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 rounded-full transition-colors">
+              <MoreVertical className="w-5 h-5" />
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      <UserModalPostcard
+        userId={otherUser.id}
+        username={otherUser.username}
+        isOpen={showUserModal}
+        onClose={() => setShowUserModal(false)}
+        anchorPosition={userModalPosition}
+      />
+    </>
   );
 };
 

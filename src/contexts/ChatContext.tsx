@@ -81,18 +81,4 @@ export const ChatProvider: FC<ChatProviderProps> = ({ children }) => {
       {children}
     </ChatContext.Provider>
   );
-};ading]);
-
-  return (
-    <ChatContext.Provider 
-      value={{ 
-        chats, 
-        unreadChatsCount,
-        refreshChats,
-        loading
-      }}
-    >
-      {children}
-    </ChatContext.Provider>
-  );
 };

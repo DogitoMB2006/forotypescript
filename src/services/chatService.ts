@@ -1,96 +1,44 @@
-import { 
-  collection, 
-  addDoc, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot, 
-  doc, 
-  getDoc, 
+import {
+  collection,
+  doc,
+  addDoc,
+  getDoc,
   getDocs,
   updateDoc,
   deleteDoc,
-  serverTimestamp,
+  query,
+  where,
+  orderBy,
+  onSnapshot,
   writeBatch,
+  serverTimestamp,
   increment
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import type { ChatMessage, ChatPreview } from '../types/chat';
 
-export const createChat = async (currentUserId: string, otherUserId: string, currentUserProfile: any, otherUserProfile: any): Promise<string> => {
-  try {
-    console.log('ChatService: Creating chat between', currentUserId, 'and', otherUserId);
-    console.log('ChatService: Current user profile:', currentUserProfile);
-    console.log('ChatService: Other user profile:', otherUserProfile);
-    
-    const existingChatId = await findExistingChat(currentUserId, otherUserId);
-    if (existingChatId) {
-      console.log('ChatService: Found existing chat:', existingChatId);
-      return existingChatId;
-    }
 
-    console.log('ChatService: Creating new chat...');
-    const chatData = {
-      participants: [currentUserId, otherUserId],
-      participantDetails: {
-        [currentUserId]: {
-          username: currentUserProfile.username,
-          displayName: currentUserProfile.displayName,
-          profileImage: currentUserProfile.profileImageUrl || null,
-          lastSeen: serverTimestamp()
-        },
-        [otherUserId]: {
-          username: otherUserProfile.username,
-          displayName: otherUserProfile.displayName,
-          profileImage: otherUserProfile.profileImageUrl || null,
-          lastSeen: serverTimestamp()
-        }
-      },
-      lastMessage: null,
-      lastMessageAt: serverTimestamp(),
-      unreadCount: {
-        [currentUserId]: 0,
-        [otherUserId]: 0
-      },
-      isActive: true,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    };
+interface UserProfile {
+  uid: string;
+  email: string;
+  username: string;
+  displayName: string;
+  bio?: string;
+  profileImageUrl?: string;
+  bannerImageUrl?: string;
+  createdAt: Date;
+  updatedAt?: Date;
+  defaultBadgeId?: string;
+}
 
-    console.log('ChatService: Chat data to create:', chatData);
-    const docRef = await addDoc(collection(db, 'chats'), chatData);
-    console.log('ChatService: Chat created with ID:', docRef.id);
-    return docRef.id;
-  } catch (error) {
-    console.error('Error creating chat:', error);
-    throw error;
-  }
-};
-
-export const findExistingChat = async (userId1: string, userId2: string): Promise<string | null> => {
-  try {
-    const q = query(
-      collection(db, 'chats'),
-      where('participants', 'array-contains', userId1)
-    );
-    
-    const querySnapshot = await getDocs(q);
-    
-    for (const docSnapshot of querySnapshot.docs) {
-      const chat = docSnapshot.data();
-      if (chat.participants.includes(userId2)) {
-        return docSnapshot.id;
-      }
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Error finding existing chat:', error);
-    return null;
-  }
-};
-
-export const sendMessage = async (chatId: string, senderId: string, senderProfile: any, content: string, type: 'text' | 'image' | 'audio' = 'text', fileUrl?: string): Promise<string> => {
+export const sendMessage = async (
+  chatId: string,
+  senderId: string,
+  senderProfile: UserProfile,
+  content: string,
+  type: 'text' | 'image' | 'audio' = 'text',
+  fileUrl?: string
+): Promise<string> => {
   try {
     console.log('ChatService: Sending message', { chatId, senderId, content, type });
     
@@ -161,6 +109,11 @@ export const getUserChats = async (userId: string): Promise<ChatPreview[]> => {
       const chatData = docSnapshot.data();
       const otherUserId = chatData.participants.find((id: string) => id !== userId);
       const otherUserDetails = chatData.participantDetails[otherUserId];
+      
+      if (!otherUserDetails) {
+        console.warn('ChatService: Missing participant details for:', otherUserId);
+        continue;
+      }
       
       const chatPreview: ChatPreview = {
         id: docSnapshot.id,
@@ -269,7 +222,7 @@ export const deleteMessage = async (messageId: string): Promise<void> => {
     if (messageDoc.exists()) {
       const messageData = messageDoc.data();
       
-      // Si el mensaje tiene archivo adjunto, eliminarlo de Storage
+     
       if (messageData.fileUrl) {
         try {
           const { deleteChatFile } = await import('./chatFileService');
@@ -277,11 +230,11 @@ export const deleteMessage = async (messageId: string): Promise<void> => {
           console.log('ChatService: Associated file deleted');
         } catch (fileError) {
           console.error('Error deleting associated file:', fileError);
-          // Continuar con la eliminación del mensaje aunque falle el archivo
+        
         }
       }
       
-      // Eliminar el mensaje de Firestore
+   
       await deleteDoc(messageRef);
       console.log('ChatService: Message deleted successfully');
     }
@@ -291,56 +244,85 @@ export const deleteMessage = async (messageId: string): Promise<void> => {
   }
 };
 
-export const editMessage = async (messageId: string, newContent: string): Promise<void> => {
+export const createChat = async (
+  currentUserId: string, 
+  otherUserId: string, 
+  currentUserProfile: UserProfile, 
+  otherUserProfile: { id: string; username: string; displayName: string; profileImageUrl?: string }
+): Promise<string> => {
   try {
-    console.log('ChatService: Editing message', messageId, 'with content:', newContent);
+    console.log('ChatService: Creating chat between', currentUserId, 'and', otherUserId);
+    console.log('ChatService: Current user profile:', currentUserProfile);
+    console.log('ChatService: Other user profile:', otherUserProfile);
     
-    const messageRef = doc(db, 'messages', messageId);
-    await updateDoc(messageRef, {
-      content: newContent,
-      isEdited: true,
-      editedAt: serverTimestamp(),
+    const existingChatId = await findExistingChat(currentUserId, otherUserId);
+    if (existingChatId) {
+      console.log('ChatService: Found existing chat:', existingChatId);
+      return existingChatId;
+    }
+
+    console.log('ChatService: Creating new chat...');
+    const chatData = {
+      participants: [currentUserId, otherUserId],
+      participantDetails: {
+        [currentUserId]: {
+          username: currentUserProfile.username,
+          displayName: currentUserProfile.displayName,
+          profileImage: currentUserProfile.profileImageUrl || null,
+          lastSeen: serverTimestamp()
+        },
+        [otherUserId]: {
+          username: otherUserProfile.username,
+          displayName: otherUserProfile.displayName,
+          profileImage: otherUserProfile.profileImageUrl || null,
+          lastSeen: serverTimestamp()
+        }
+      },
+      lastMessage: null,
+      lastMessageAt: serverTimestamp(),
+      unreadCount: {
+        [currentUserId]: 0,
+        [otherUserId]: 0
+      },
+      isActive: true,
+      createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    });
-    
-    console.log('ChatService: Message edited successfully');
+    };
+
+    console.log('ChatService: Chat data to create:', chatData);
+    const docRef = await addDoc(collection(db, 'chats'), chatData);
+    console.log('ChatService: Chat created with ID:', docRef.id);
+    return docRef.id;
   } catch (error) {
-    console.error('Error editing message:', error);
+    console.error('Error creating chat:', error);
     throw error;
   }
 };
 
-export const deleteMessage = async (messageId: string): Promise<void> => {
+export const findExistingChat = async (userId1: string, userId2: string): Promise<string | null> => {
   try {
-    console.log('ChatService: Deleting message', messageId);
+    const q = query(
+      collection(db, 'chats'),
+      where('participants', 'array-contains', userId1)
+    );
     
-    const messageRef = doc(db, 'messages', messageId);
-    const messageDoc = await getDoc(messageRef);
+    const querySnapshot = await getDocs(q);
     
-    if (messageDoc.exists()) {
-      const messageData = messageDoc.data();
-      
-      // Si el mensaje tiene archivo adjunto, eliminarlo de Storage
-      if (messageData.fileUrl) {
-        try {
-          const { deleteChatFile } = await import('./chatFileService');
-          await deleteChatFile(messageData.fileUrl);
-          console.log('ChatService: Associated file deleted');
-        } catch (fileError) {
-          console.error('Error deleting associated file:', fileError);
-          // Continuar con la eliminación del mensaje aunque falle el archivo
-        }
+    for (const docSnapshot of querySnapshot.docs) {
+      const chat = docSnapshot.data();
+      if (chat.participants.includes(userId2)) {
+        return docSnapshot.id;
       }
-      
-      // Eliminar el mensaje de Firestore
-      await deleteDoc(messageRef);
-      console.log('ChatService: Message deleted successfully');
     }
+    
+    return null;
   } catch (error) {
-    console.error('Error deleting message:', error);
-    throw error;
+    console.error('Error finding existing chat:', error);
+    return null;
   }
 };
+
+export const subscribeToUserChats = (userId: string, callback: (chats: ChatPreview[]) => void) => {
   console.log('ChatService: Setting up subscription for user:', userId);
   
   const q = query(

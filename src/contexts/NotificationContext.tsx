@@ -89,10 +89,13 @@ export const NotificationProvider: FC<NotificationProviderProps> = ({ children }
             id: notification.id,
             type: notification.type,
             title: getToastTitle(notification.type),
-            message: `${notification.triggeredByDisplayName} ${getToastMessage(notification.type)}`,
+            message: notification.type === 'message' 
+              ? notification.message 
+              : `${notification.triggeredByDisplayName} ${getToastMessage(notification.type)}`,
             avatar: notification.triggeredByProfileImage,
             postId: notification.postId,
             commentId: notification.commentId,
+            chatId: notification.data?.chatId,
             timestamp: new Date()
           };
           
@@ -101,13 +104,14 @@ export const NotificationProvider: FC<NotificationProviderProps> = ({ children }
           if (notificationPermissionService.getPermissionStatus() === 'granted') {
             try {
               await notificationPermissionService.showNotification({
-                title: toast.title,
-                body: toast.message,
+                title: notification.type === 'message' ? notification.triggeredByDisplayName : toast.title,
+                body: notification.message,
                 icon: toast.avatar || '/favicon.ico',
                 tag: notification.id,
                 data: {
                   postId: notification.postId,
-                  commentId: notification.commentId
+                  commentId: notification.commentId,
+                  chatId: notification.data?.chatId
                 }
               });
             } catch (error) {
@@ -142,6 +146,8 @@ export const NotificationProvider: FC<NotificationProviderProps> = ({ children }
         return 'Le gustó tu post';
       case 'mention':
         return 'Te mencionaron';
+      case 'message':
+        return 'Nuevo mensaje';
       default:
         return 'Nueva notificación';
     }
@@ -157,6 +163,8 @@ export const NotificationProvider: FC<NotificationProviderProps> = ({ children }
         return 'le gustó tu post';
       case 'mention':
         return 'te mencionó en un post';
+      case 'message':
+        return '';
       default:
         return 'nueva actividad';
     }

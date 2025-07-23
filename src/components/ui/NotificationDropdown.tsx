@@ -58,14 +58,16 @@ const NotificationDropdown: FC<NotificationDropdownProps> = ({ isOpen, onClose }
         );
       }
 
-      if (notification.postId) {
+      if (notification.type === 'message' && notification.data?.chatId) {
+        navigate(`/chats/${notification.data.chatId}`);
+      } else if (notification.postId) {
         if (notification.commentId) {
           navigate(`/post/${notification.postId}#comment-${notification.commentId}`);
         } else {
           navigate(`/post/${notification.postId}`);
         }
-        onClose();
       }
+      onClose();
     } catch (error) {
       console.error('Error handling notification click:', error);
     }
@@ -108,6 +110,12 @@ const NotificationDropdown: FC<NotificationDropdownProps> = ({ isOpen, onClose }
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
         );
+      case 'message':
+        return (
+          <svg className="w-4 h-4 text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        );
       default:
         return null;
     }
@@ -123,96 +131,100 @@ const NotificationDropdown: FC<NotificationDropdownProps> = ({ isOpen, onClose }
         return `${notification.triggeredByDisplayName} le gustó tu post`;
       case 'mention':
         return `${notification.triggeredByDisplayName} te mencionó`;
+      case 'message':
+        return notification.message;
       default:
-        return notification.content;
+        return notification.message || 'Nueva notificación';
     }
   };
 
   const formatTime = (date: Date) => {
     const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-    if (minutes < 1) return 'Ahora';
-    if (minutes < 60) return `${minutes}m`;
-    if (hours < 24) return `${hours}h`;
-    return `${days}d`;
+    if (diffMins < 1) return 'Ahora';
+    if (diffMins < 60) return `${diffMins}m`;
+    if (diffHours < 24) return `${diffHours}h`;
+    if (diffDays < 7) return `${diffDays}d`;
+    return date.toLocaleDateString();
   };
 
   if (!isOpen) return null;
 
   return (
-    <div 
+    <div
       ref={dropdownRef}
-      className="fixed inset-x-4 top-16 sm:absolute sm:right-0 sm:top-full sm:mt-2 sm:inset-x-auto w-auto sm:w-80 md:w-96 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50 max-h-[calc(100vh-5rem)] sm:max-h-80 md:max-h-96 overflow-hidden"
+      className="absolute right-0 top-full mt-2 w-80 bg-gray-900 border border-gray-700 rounded-lg shadow-xl z-50 max-h-96 overflow-hidden"
     >
-      <div className="flex items-center justify-between p-4 border-b border-gray-700">
-        <h3 className="text-lg font-semibold text-white">Notificaciones</h3>
-        {notifications.length > 0 && (
-          <button
-            onClick={handleClearAll}
-            className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors px-3 py-1.5 rounded-md hover:bg-emerald-400/10 active:bg-emerald-400/20"
-          >
-            Limpiar todo
-          </button>
-        )}
+      <div className="p-4 border-b border-gray-700">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-white">Notificaciones</h3>
+          {notifications.length > 0 && (
+            <button
+              onClick={handleClearAll}
+              className="text-sm text-emerald-400 hover:text-emerald-300 transition-colors"
+            >
+              Limpiar todo
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="max-h-[calc(100vh-8rem)] sm:max-h-64 md:max-h-80 overflow-y-auto">
+      <div className="max-h-80 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center p-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
           </div>
         ) : notifications.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">
-            <svg className="w-12 h-12 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM15 17l-5-5h5v5z" />
-            </svg>
-            <p className="text-sm">No tienes notificaciones</p>
+          <div className="p-8 text-center">
+            <div className="w-12 h-12 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
+              <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM9 7H4l5-5v5zM12 12h.01" />
+              </svg>
+            </div>
+            <p className="text-gray-400 text-sm">No hay notificaciones</p>
           </div>
         ) : (
-          <div className="py-2">
+          <div className="divide-y divide-gray-800">
             {notifications.map((notification) => (
               <div
                 key={notification.id}
                 onClick={() => handleNotificationClick(notification)}
-                className={`flex items-start space-x-3 p-4 hover:bg-gray-800 cursor-pointer transition-colors active:bg-gray-700 touch-manipulation ${
-                  !notification.isRead ? 'bg-gray-800/50' : ''
+                className={`p-4 hover:bg-gray-800/50 cursor-pointer transition-colors ${
+                  !notification.isRead ? 'bg-gray-800/30' : ''
                 }`}
               >
-                <div className="flex-shrink-0 mt-1">
-                  <Avatar
-                    src={notification.triggeredByProfileImage}
-                    alt={notification.triggeredByDisplayName}
-                    name={notification.triggeredByDisplayName}
-                    size="sm"
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start space-x-2">
-                    <div className="flex-shrink-0 mt-1">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <Avatar
+                      src={notification.triggeredByProfileImage}
+                      alt={notification.triggeredByDisplayName}
+                      name={notification.triggeredByDisplayName}
+                      size="sm"
+                    />
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2">
                       {getNotificationIcon(notification.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white leading-relaxed">
-                        {getNotificationText(notification)}
-                      </p>
-                      {notification.content && notification.type !== 'like' && (
-                        <p className="text-xs text-gray-400 mt-2 line-clamp-2 leading-relaxed">
-                          "{notification.content}"
-                        </p>
+                      <span className="text-sm font-medium text-white truncate">
+                        {notification.title}
+                      </span>
+                      {!notification.isRead && (
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0"></div>
                       )}
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between mt-3">
-                    <span className="text-xs text-gray-500">
+                    
+                    <p className="text-sm text-gray-300 mt-1 line-clamp-2">
+                      {getNotificationText(notification)}
+                    </p>
+                    
+                    <p className="text-xs text-gray-500 mt-1">
                       {formatTime(notification.createdAt)}
-                    </span>
-                    {!notification.isRead && (
-                      <div className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0"></div>
-                    )}
+                    </p>
                   </div>
                 </div>
               </div>

@@ -69,7 +69,7 @@ const Navbar: FC = () => {
                 <div className="absolute -inset-1 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg opacity-20 group-hover:opacity-40 transition-opacity duration-200 blur"></div>
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-emerald-500 bg-clip-text text-transparent hidden sm:block">
-                ForoTech
+                DF
               </span>
             </Link>
           </div>

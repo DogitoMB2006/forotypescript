@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import type { User } from 'firebase/auth';
-import { doc, getDoc, onSnapshot, collection, query, where } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { getUserHighestRole, canUserModerate, isUserAdmin } from '../services/roleService';
 import type { Role } from '../types/roles';
@@ -36,6 +36,8 @@ export const useAuth = (): AuthData => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userRole, setUserRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [canModerate, setCanModerate] = useState(false);
 
   useEffect(() => {
     console.log('useAuth: Setting up auth listener');
@@ -47,7 +49,7 @@ export const useAuth = (): AuthData => {
         if (firebaseUser) {
           setUser(firebaseUser);
           
-          // Cargar perfil de usuario
+        
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
             console.log('useAuth: User profile loaded');
@@ -57,13 +59,21 @@ export const useAuth = (): AuthData => {
             setUserProfile(null);
           }
 
-          // Cargar rol de usuario (simplificado)
+     
           try {
             const role = await getUserHighestRole(firebaseUser.uid);
             setUserRole(role);
+            
+           
+            const adminStatus = isUserAdmin(firebaseUser.email || '');
+            const moderateStatus = await canUserModerate(firebaseUser.uid, firebaseUser.email || '');
+            setIsAdmin(adminStatus);
+            setCanModerate(moderateStatus);
           } catch (roleError) {
             console.error('Error loading user role:', roleError);
             setUserRole(null);
+            setIsAdmin(false);
+            setCanModerate(false);
           }
 
         } else {
@@ -71,6 +81,8 @@ export const useAuth = (): AuthData => {
           setUser(null);
           setUserProfile(null);
           setUserRole(null);
+          setIsAdmin(false);
+          setCanModerate(false);
         }
       } catch (error) {
         console.error('Error in auth state change:', error);
@@ -92,16 +104,16 @@ export const useAuth = (): AuthData => {
       setUser(null);
       setUserProfile(null);
       setUserRole(null);
+      setIsAdmin(false);
+      setCanModerate(false);
     } catch (error) {
       console.error('Error signing out:', error);
     }
   };
 
-  const isAdmin = user ? isUserAdmin(user.email || '') : false;
+  const isAuthenticated = !!user;
 
   const hasPermission = (action: string, resource: string): boolean => {
-    if (!user) return false;
-    if (user.email === 'dogitomb2022@gmail.com') return true;
     if (!userRole) return false;
     
     return userRole.permissions.some(
@@ -109,32 +121,15 @@ export const useAuth = (): AuthData => {
     );
   };
 
-  const [canModerateSync, setCanModerateSync] = useState(false);
-  
-  useEffect(() => {
-    if (user && !loading) {
-      canUserModerate(user.uid, user.email || '').then(setCanModerateSync).catch(() => setCanModerateSync(false));
-    } else {
-      setCanModerateSync(false);
-    }
-  }, [user, userRole, loading]);
-
-  console.log('useAuth: Current state', { 
-    hasUser: !!user, 
-    hasProfile: !!userProfile, 
-    loading, 
-    isAuthenticated: !!user 
-  });
-
   return {
     user,
     userProfile,
     userRole,
     loading,
     logout,
-    isAuthenticated: !!user,
+    isAuthenticated,
     isAdmin,
-    canModerate: canModerateSync,
+    canModerate,
     hasPermission
   };
 };

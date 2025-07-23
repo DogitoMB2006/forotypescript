@@ -1,9 +1,10 @@
-const handleSendMessage = async (content: stringimport type { FC } from 'react';
+import type { FC } from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../hooks/useAuth';
+import { useChatRoomNotifications } from '../../hooks/useChatNotifications';
 import { getChatMessages, sendMessage, markMessagesAsRead, editMessage, deleteMessage } from '../../services/chatService';
 import { getUserProfile } from '../../services/userService';
 import type { ChatMessage } from '../../types/chat';
@@ -15,6 +16,7 @@ const ChatConversation: FC = () => {
   const { chatId } = useParams<{ chatId: string }>();
   const { user, userProfile } = useAuth();
   const navigate = useNavigate();
+  useChatRoomNotifications(chatId);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [otherUser, setOtherUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -27,16 +29,13 @@ const ChatConversation: FC = () => {
     if (!chatId || !user?.uid) return;
 
     const unsubscribe = getChatMessages(chatId, (newMessages) => {
-      console.log('ChatConversation: Messages received:', newMessages.length);
       setMessages(newMessages);
       setLoading(false);
 
-      // Auto scroll to bottom on new messages
       setTimeout(() => {
         scrollToBottom();
       }, 100);
 
-      // Mark messages as read
       if (newMessages.length > 0) {
         markMessagesAsRead(chatId, user.uid);
       }
@@ -46,36 +45,37 @@ const ChatConversation: FC = () => {
   }, [chatId, user?.uid]);
 
   useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => {
+        scrollToBottom();
+      }, 200);
+    }
+  }, [messages.length]);
+
+  useEffect(() => {
     const loadOtherUserFromChat = async () => {
       if (!chatId || !user?.uid) return;
 
       try {
-        console.log('ChatConversation: Loading chat data for:', chatId);
         const chatRef = doc(db, 'chats', chatId);
         const chatDoc = await getDoc(chatRef);
         
         if (chatDoc.exists()) {
           const chatData = chatDoc.data();
-          console.log('ChatConversation: Chat data loaded:', chatData);
           
           const otherUserId = chatData.participants.find((id: string) => id !== user.uid);
           if (otherUserId && chatData.participantDetails[otherUserId]) {
             const otherUserDetails = chatData.participantDetails[otherUserId];
-            console.log('ChatConversation: Other user details:', otherUserDetails);
             
             setOtherUser({
               id: otherUserId,
               username: otherUserDetails.username,
               displayName: otherUserDetails.displayName,
               profileImage: otherUserDetails.profileImage,
-              isOnline: false, // TODO: Implement online status
+              isOnline: false,
               lastSeen: otherUserDetails.lastSeen?.toDate() || new Date()
             });
-          } else {
-            console.error('ChatConversation: No other user found in chat');
           }
-        } else {
-          console.error('ChatConversation: Chat not found');
         }
       } catch (error) {
         console.error('Error loading chat data:', error);
@@ -91,7 +91,6 @@ const ChatConversation: FC = () => {
     const loadOtherUserFromMessages = async () => {
       if (!chatId || !user?.uid || messages.length === 0 || otherUser) return;
 
-      // Solo como fallback si no se pudo cargar desde el chat
       const otherUserId = messages.find(msg => msg.senderId !== user.uid)?.senderId;
       if (!otherUserId) return;
 
@@ -119,7 +118,11 @@ const ChatConversation: FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleSendMessage = async (content: string, type: 'text' | 'image' | 'audio' = 'text', fileUrl?: string) => {
+  const handleSendMessage = async (
+    content: string, 
+    type: 'text' | 'image' | 'audio' = 'text', 
+    fileUrl?: string
+  ) => {
     if (!chatId || !user?.uid || !userProfile) return;
 
     setSending(true);
@@ -134,7 +137,6 @@ const ChatConversation: FC = () => {
 
   const handleEditMessage = async (messageId: string, newContent: string) => {
     try {
-      console.log('ChatConversation: Editing message', messageId, 'with content:', newContent);
       await editMessage(messageId, newContent);
     } catch (error) {
       console.error('Error editing message:', error);
@@ -144,7 +146,6 @@ const ChatConversation: FC = () => {
 
   const handleDeleteMessage = async (messageId: string) => {
     try {
-      console.log('ChatConversation: Deleting message', messageId);
       await deleteMessage(messageId);
     } catch (error) {
       console.error('Error deleting message:', error);
@@ -170,7 +171,6 @@ const ChatConversation: FC = () => {
     const prevMessage = messages[index - 1];
     const timeDiff = message.createdAt.getTime() - prevMessage.createdAt.getTime();
     
-    // Show timestamp if more than 1 hour difference
     return timeDiff > 3600000;
   };
 
@@ -209,7 +209,7 @@ const ChatConversation: FC = () => {
       {/* Messages */}
       <div 
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4"
+        className="flex-1 overflow-y-auto px-2 py-2 sm:px-4 sm:py-4 space-y-1"
       >
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">

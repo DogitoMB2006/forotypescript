@@ -87,10 +87,10 @@ const MessageBubble: FC<MessageBubbleProps> = ({
     switch (message.type) {
       case 'image':
         return (
-          <div className="relative max-w-xs">
+          <div className="relative max-w-[200px] sm:max-w-xs">
             {!imageLoaded && (
               <div className="absolute inset-0 bg-gray-700 animate-pulse rounded-lg flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-gray-500 border-t-white rounded-full animate-spin"></div>
+                <div className="w-6 h-6 border-2 border-gray-500 border-t-white rounded-full animate-spin"></div>
               </div>
             )}
             <img
@@ -108,24 +108,22 @@ const MessageBubble: FC<MessageBubbleProps> = ({
               loading="lazy"
             />
             {message.content && (
-              <p className="mt-2 text-sm">{message.content}</p>
+              <p className="mt-1 text-sm">{message.content}</p>
             )}
           </div>
         );
       
       case 'audio':
         return (
-          <div className="flex items-center space-x-3 min-w-[200px]">
-            <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <div className="flex items-center space-x-2 min-w-[180px] sm:min-w-[200px]">
+            <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M9.383 3.076A1 1 0 0110 4v12a1 1 0 01-1.617.768l-4.036-3.228A1 1 0 014 12.768V7.232a1 1 0 01.347-.768l4.036-3.228z" clipRule="evenodd" />
-                <path d="M14.657 2.929a1 1 0 111.414 1.414A8.971 8.971 0 0118 10a8.971 8.971 0 01-1.929 5.657 1 1 0 11-1.414-1.414A6.971 6.971 0 0016 10a6.971 6.971 0 00-1.343-4.243z" />
-                <path d="M12.828 5.757a1 1 0 111.415 1.415A4.978 4.978 0 0115 10a4.978 4.978 0 01-.757 2.828 1 1 0 11-1.415-1.415A2.978 2.978 0 0013 10a2.978 2.978 0 00-.172-1.828z" />
               </svg>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium">Mensaje de voz</p>
-              <audio controls className="w-full mt-1" preload="metadata">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium mb-1">Mensaje de voz</p>
+              <audio controls className="w-full" preload="metadata" style={{ height: '32px' }}>
                 <source src={message.fileUrl} type="audio/mpeg" />
                 Tu navegador no soporta audio.
               </audio>
@@ -142,11 +140,10 @@ const MessageBubble: FC<MessageBubbleProps> = ({
     }
   };
 
-  // Si está en modo edición, mostrar el input de edición
   if (isEditing) {
     return (
-      <div className={`flex items-end space-x-2 ${isOwn ? 'flex-row-reverse space-x-reverse' : ''}`}>
-        <div className="flex-shrink-0 w-8 h-8">
+      <div className={`flex items-end space-x-2 mb-1 ${isOwn ? 'flex-row-reverse space-x-reverse' : ''}`}>
+        <div className={`flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 ${isOwn ? 'ml-1 order-2' : ''}`}>
           {showAvatar && !isOwn && (
             <Avatar
               src={message.senderProfileImage}
@@ -168,9 +165,8 @@ const MessageBubble: FC<MessageBubbleProps> = ({
   }
 
   return (
-    <div className={`flex items-end space-x-2 group ${isOwn ? 'flex-row-reverse space-x-reverse' : ''}`}>
-      {/* Avatar */}
-      <div className="flex-shrink-0 w-8 h-8">
+    <div className={`flex items-end group mb-1 ${isOwn ? 'justify-end' : 'space-x-2'}`}>
+      <div className="flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8">
         {showAvatar && !isOwn && (
           <Avatar
             src={message.senderProfileImage}
@@ -181,17 +177,14 @@ const MessageBubble: FC<MessageBubbleProps> = ({
         )}
       </div>
 
-      {/* Message container */}
-      <div className={`flex flex-col max-w-xs sm:max-w-sm lg:max-w-md xl:max-w-lg ${isOwn ? 'items-end' : 'items-start'}`}>
-        {/* Sender name (only for group chats or if not own message) */}
+      <div className={`flex flex-col max-w-[85%] sm:max-w-[75%] md:max-w-sm lg:max-w-md ${isOwn ? 'items-end' : 'items-start'}`}>
         {!isOwn && showAvatar && (
-          <span className="text-xs text-gray-400 mb-1 px-3">
+          <span className="text-xs text-gray-400 mb-0.5 px-2">
             {message.senderDisplayName}
           </span>
         )}
 
-        {/* Message bubble with context menu */}
-        <div className="relative flex items-start space-x-2">
+        <div className="relative flex items-start space-x-1">
           <div
             className={`relative px-3 py-2 rounded-2xl shadow-sm ${
               isOwn
@@ -201,7 +194,6 @@ const MessageBubble: FC<MessageBubbleProps> = ({
           >
             {renderMessageContent()}
 
-            {/* Message status and time */}
             <div className={`flex items-center space-x-1 mt-1 ${
               message.type === 'text' ? 'justify-end' : 'justify-between'
             }`}>
@@ -212,7 +204,7 @@ const MessageBubble: FC<MessageBubbleProps> = ({
               </span>
               
               {isOwn && (
-                <div className="flex items-center">
+                <div className="flex items-center ml-1">
                   {message.isRead ? (
                     <CheckCheck className="w-3 h-3 text-emerald-200" />
                   ) : (
@@ -222,9 +214,8 @@ const MessageBubble: FC<MessageBubbleProps> = ({
               )}
             </div>
 
-            {/* Edited indicator */}
             {message.isEdited && (
-              <span className={`text-xs italic mt-1 block ${
+              <span className={`text-xs italic mt-0.5 block ${
                 isOwn ? 'text-emerald-200' : 'text-gray-500'
               }`}>
                 editado
@@ -232,7 +223,6 @@ const MessageBubble: FC<MessageBubbleProps> = ({
             )}
           </div>
 
-          {/* Context Menu */}
           <MessageContextMenu
             isOwn={isOwn}
             messageContent={message.content || ''}
@@ -243,9 +233,8 @@ const MessageBubble: FC<MessageBubbleProps> = ({
           />
         </div>
 
-        {/* Timestamp for message groups */}
         {showTimestamp && (
-          <div className="flex items-center justify-center w-full my-4">
+          <div className="flex items-center justify-center w-full my-3">
             <span className="bg-gray-800 text-gray-400 text-xs px-3 py-1 rounded-full">
               {formatDate(message.createdAt)}
             </span>
