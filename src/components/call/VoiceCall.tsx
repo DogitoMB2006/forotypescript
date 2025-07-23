@@ -1,4 +1,4 @@
-
+// src/components/call/VoiceCall.tsx
 import { useState, useEffect, useRef } from 'react';
 import { Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { collection, doc, addDoc, onSnapshot, updateDoc, deleteDoc, serverTimestamp, getDoc } from 'firebase/firestore';
@@ -6,6 +6,7 @@ import { db } from '../../firebase/config';
 import { useAuth } from '../../hooks/useAuth';
 import { useCall } from '../../contexts/CallContext';
 import Avatar from '../ui/Avatar';
+import MicrophoneSelector from './MicrophoneSelector';
 
 interface VoiceCallProps {
   otherUser: {
@@ -46,6 +47,8 @@ const VoiceCall = ({
   const [isSpeakerOn, setIsSpeakerOn] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
   const [callId, setCallId] = useState<string | null>(initialCallId || null);
+  const [currentMicId, setCurrentMicId] = useState<string>('');
+  const [currentSpeakerId, setCurrentSpeakerId] = useState<string>('');
   
   const localAudioRef = useRef<HTMLAudioElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
@@ -62,7 +65,7 @@ const VoiceCall = ({
       { urls: 'stun:stun2.l.google.com:19302' },
       { urls: 'stun:stun3.l.google.com:19302' },
       { urls: 'stun:stun4.l.google.com:19302' },
-    
+      // Servidores STUN adicionales para mejor conectividad en producción
       { urls: 'stun:stun.stunprotocol.org:3478' },
       { urls: 'stun:stun.services.mozilla.com' }
     ],
@@ -113,7 +116,7 @@ const VoiceCall = ({
           const stats = await peerConnectionRef.current.getStats();
           console.log('VoiceCall: Heartbeat - Connection active, stats:', stats.size);
           
-      
+          // Debug: Check audio stats
           stats.forEach((report) => {
             if (report.type === 'inbound-rtp' && report.mediaType === 'audio') {
               console.log('VoiceCall: Inbound audio - packets received:', report.packetsReceived);
@@ -137,6 +140,54 @@ const VoiceCall = ({
     if (heartbeatRef.current) {
       clearInterval(heartbeatRef.current);
       heartbeatRef.current = null;
+    }
+  };
+
+  const handleMicrophoneChange = async (deviceId: string) => {
+    setCurrentMicId(deviceId);
+    
+    if (localStreamRef.current && peerConnectionRef.current) {
+      try {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+          audio: { deviceId: { exact: deviceId } },
+          video: false
+        });
+        
+        const oldTrack = localStreamRef.current.getAudioTracks()[0];
+        const newTrack = newStream.getAudioTracks()[0];
+        
+        const sender = peerConnectionRef.current.getSenders().find(s => 
+          s.track && s.track.kind === 'audio'
+        );
+        
+        if (sender) {
+          await sender.replaceTrack(newTrack);
+        }
+        
+        if (oldTrack) {
+          oldTrack.stop();
+        }
+        
+        localStreamRef.current = newStream;
+        
+        if (localAudioRef.current) {
+          localAudioRef.current.srcObject = newStream;
+        }
+      } catch (error) {
+        console.error('Error changing microphone:', error);
+      }
+    }
+  };
+
+  const handleSpeakerChange = (deviceId: string) => {
+    setCurrentSpeakerId(deviceId);
+    
+    if (remoteAudioRef.current && 'setSinkId' in remoteAudioRef.current) {
+      try {
+        (remoteAudioRef.current as any).setSinkId(deviceId);
+      } catch (error) {
+        console.error('Error changing speaker:', error);
+      }
     }
   };
 
@@ -165,7 +216,7 @@ const VoiceCall = ({
       console.log('VoiceCall: Starting outgoing call to', otherUser.displayName);
       setCallStatus('connecting');
       
-    
+      // Inicializar WebRTC ANTES de crear el documento de llamada
       await initializeWebRTC();
       
       const callDoc = await addDoc(collection(db, 'calls'), {
@@ -183,7 +234,7 @@ const VoiceCall = ({
       callDocRef.current = callDoc;
       setCallStatus('ringing');
 
-      
+      // Ahora crear la offer
       await handleOutgoingWebRTC(callDoc.id);
 
       onSnapshot(doc(db, 'calls', callDoc.id), (snapshot) => {
@@ -240,21 +291,21 @@ const VoiceCall = ({
     try {
       console.log('VoiceCall: Initializing WebRTC');
       
-   
+      // Verificar si estamos en HTTPS (requerido para producción)
       if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
         console.warn('VoiceCall: WebRTC requires HTTPS in production');
       }
       
       peerConnectionRef.current = new RTCPeerConnection(servers);
       
-    
+      // Configuración de audio optimizada para producción
       const audioConstraints = {
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
           sampleRate: 44100,
-      
+          // Configuraciones adicionales para mejor calidad
           channelCount: 1,
           latency: 0.01,
           googEchoCancellation: true,
@@ -289,14 +340,22 @@ const VoiceCall = ({
           remoteAudioRef.current.srcObject = event.streams[0];
           remoteAudioRef.current.volume = 1.0;
           
-   
+          if (currentSpeakerId && 'setSinkId' in remoteAudioRef.current) {
+            try {
+              (remoteAudioRef.current as any).setSinkId(currentSpeakerId);
+            } catch (error) {
+              console.error('Error setting audio output device:', error);
+            }
+          }
+          
+          // Asegurar que el audio se reproduzca en móviles/producción
           const playPromise = remoteAudioRef.current.play();
           if (playPromise !== undefined) {
             playPromise.then(() => {
               console.log('VoiceCall: Remote audio playing successfully!');
             }).catch(error => {
               console.error('VoiceCall: Error playing remote audio:', error);
-            
+              // Intentar reproducir después de interacción del usuario
               const playOnClick = () => {
                 if (remoteAudioRef.current) {
                   remoteAudioRef.current.play();
@@ -372,7 +431,7 @@ const VoiceCall = ({
     } catch (error) {
       console.error('Error initializing WebRTC:', error);
       
-     
+      // Manejo específico de errores comunes en producción
       if (error instanceof Error) {
         if (error.name === 'NotAllowedError') {
           console.error('VoiceCall: Microphone permission denied');
@@ -385,7 +444,7 @@ const VoiceCall = ({
           alert('El micrófono está siendo usado por otra aplicación. Por favor, cierra otras aplicaciones que puedan estar usando el micrófono.');
         } else if (error.name === 'OverconstrainedError') {
           console.error('VoiceCall: Audio constraints not supported');
-      
+          // Intentar con configuración más básica
           try {
             console.log('VoiceCall: Trying with basic audio constraints');
             const basicStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -456,7 +515,7 @@ const VoiceCall = ({
     try {
       setupICECandidateListener(callDocId);
       
-  
+      // Esperar un momento para que se configure todo
       await new Promise(resolve => setTimeout(resolve, 500));
       
       const offer = await peerConnectionRef.current.createOffer({
@@ -502,7 +561,7 @@ const VoiceCall = ({
     console.log('VoiceCall: Setting up incoming WebRTC connection');
 
     try {
-     
+      // Esperar un momento para asegurar que todo esté configurado
       await new Promise(resolve => setTimeout(resolve, 300));
       
       const callDoc = await getDoc(doc(db, 'calls', callId));
@@ -661,7 +720,7 @@ const VoiceCall = ({
       peerConnectionRef.current = null;
     }
     
-    
+    // Limpiar elementos de audio
     if (localAudioRef.current) {
       localAudioRef.current.srcObject = null;
     }
@@ -671,7 +730,7 @@ const VoiceCall = ({
       remoteAudioRef.current.pause();
     }
     
-    
+    // Reset estados
     setCallStatus('ended');
     setCallDuration(0);
     setIsMuted(false);
@@ -741,21 +800,30 @@ const VoiceCall = ({
           )}
 
           {(callStatus === 'connected' || callStatus === 'connecting' || (callStatus === 'ringing' && !isIncoming)) && (
-            <div className="flex justify-center space-x-4">
-              <button
-                onClick={toggleMute}
-                className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                  isMuted 
-                    ? 'bg-red-500 hover:bg-red-600' 
-                    : 'bg-gray-700 hover:bg-gray-600'
-                }`}
-              >
-                {isMuted ? (
-                  <MicOff className="w-6 h-6 text-white" />
-                ) : (
-                  <Mic className="w-6 h-6 text-white" />
-                )}
-              </button>
+            <div className="flex justify-center items-center space-x-4">
+              <div className="flex items-center space-x-1">
+                <button
+                  onClick={toggleMute}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                    isMuted 
+                      ? 'bg-red-500 hover:bg-red-600' 
+                      : 'bg-gray-700 hover:bg-gray-600'
+                  }`}
+                >
+                  {isMuted ? (
+                    <MicOff className="w-6 h-6 text-white" />
+                  ) : (
+                    <Mic className="w-6 h-6 text-white" />
+                  )}
+                </button>
+                
+                <MicrophoneSelector
+                  onMicrophoneChange={handleMicrophoneChange}
+                  onSpeakerChange={handleSpeakerChange}
+                  currentMicId={currentMicId}
+                  currentSpeakerId={currentSpeakerId}
+                />
+              </div>
 
               <button
                 onClick={toggleSpeaker}
