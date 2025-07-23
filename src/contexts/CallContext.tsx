@@ -28,6 +28,7 @@ interface CallContextType {
     },
     chatId: string
   ) => void;
+  endCall: () => void;
   isInCall: boolean;
   isInChannel: boolean;
 }
@@ -53,6 +54,7 @@ export const CallProvider = ({ children, onStartCall, onJoinChannel }: CallProvi
     },
     chatId: string
   ) => {
+    console.log('CallContext: Starting voice call');
     setIsInCall(true);
     onStartCall('voice', otherUser, chatId);
   };
@@ -66,6 +68,7 @@ export const CallProvider = ({ children, onStartCall, onJoinChannel }: CallProvi
     },
     chatId: string
   ) => {
+    console.log('CallContext: Starting video call');
     setIsInCall(true);
     onStartCall('video', otherUser, chatId);
   };
@@ -79,14 +82,22 @@ export const CallProvider = ({ children, onStartCall, onJoinChannel }: CallProvi
     },
     chatId: string
   ) => {
+    console.log('CallContext: Joining voice channel');
     setIsInChannel(true);
     onJoinChannel(otherUser, chatId);
+  };
+
+  const endCall = () => {
+    console.log('CallContext: Ending call, resetting states');
+    setIsInCall(false);
+    setIsInChannel(false);
   };
 
   const value: CallContextType = {
     startVoiceCall,
     startVideoCall,
     joinVoiceChannel,
+    endCall,
     isInCall,
     isInChannel
   };

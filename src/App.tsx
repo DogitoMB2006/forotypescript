@@ -1,5 +1,5 @@
 import { RouterProvider } from 'react-router-dom';
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import router from './routes/routes';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ChatProvider } from './contexts/ChatContext';
@@ -17,6 +17,13 @@ function AppContent() {
   useChatNotifications();
   
   const callManagerRef = useRef<any>(null);
+
+
+  useEffect(() => {
+    if (callManagerRef.current) {
+      callManagerRef.current.resetState();
+    }
+  }, []);
 
   const handleStartCall = (type: 'voice' | 'video', otherUser: any, chatId: string) => {
     if (!chatId) {

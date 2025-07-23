@@ -12,6 +12,7 @@ interface CallManagerProps {
 export interface CallManagerRef {
   startCall: (type: 'voice' | 'video', otherUser: any, chatId: string) => void;
   joinChannel: (otherUser: any, chatId: string) => void;
+  resetState: () => void;
 }
 
 const CallManager = forwardRef<CallManagerRef, CallManagerProps>(({ children }, ref) => {
@@ -55,6 +56,11 @@ const CallManager = forwardRef<CallManagerRef, CallManagerProps>(({ children }, 
         otherUser,
         chatId
       });
+    },
+    resetState: () => {
+      console.log('CallManager: Resetting state');
+      setActiveCall(null);
+      setActiveChannel(null);
     }
   }));
 
@@ -103,10 +109,12 @@ const CallManager = forwardRef<CallManagerRef, CallManagerProps>(({ children }, 
   };
 
   const handleCallEnd = () => {
+    console.log('CallManager: Call ended, cleaning up');
     setActiveCall(null);
   };
 
   const handleChannelLeave = () => {
+    console.log('CallManager: Channel left, cleaning up');
     setActiveChannel(null);
   };
 
