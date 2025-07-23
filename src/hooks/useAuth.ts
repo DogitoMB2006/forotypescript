@@ -38,46 +38,52 @@ export const useAuth = (): AuthData => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-        
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
+    console.log('useAuth: Setting up auth listener');
+    
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log('useAuth: Auth state changed', { user: firebaseUser?.uid });
+      
+      try {
+        if (firebaseUser) {
+          setUser(firebaseUser);
+          
+          // Cargar perfil de usuario
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
+            console.log('useAuth: User profile loaded');
             setUserProfile(userDoc.data() as UserProfile);
+          } else {
+            console.log('useAuth: No user profile found');
+            setUserProfile(null);
           }
 
-          const role = await getUserHighestRole(user.uid);
-          setUserRole(role);
+          // Cargar rol de usuario (simplificado)
+          try {
+            const role = await getUserHighestRole(firebaseUser.uid);
+            setUserRole(role);
+          } catch (roleError) {
+            console.error('Error loading user role:', roleError);
+            setUserRole(null);
+          }
 
-          const rolesQuery = query(
-            collection(db, 'userRoles'),
-            where('userId', '==', user.uid)
-          );
-
-          const unsubscribeRoles = onSnapshot(rolesQuery, async () => {
-            try {
-              const updatedRole = await getUserHighestRole(user.uid);
-              setUserRole(updatedRole);
-            } catch (error) {
-              console.error('Error updating user role:', error);
-            }
-          });
-
-          return () => unsubscribeRoles();
-        } catch (error) {
-          console.error('Error fetching user data:', error);
+        } else {
+          console.log('useAuth: No user, clearing state');
+          setUser(null);
+          setUserProfile(null);
+          setUserRole(null);
         }
-      } else {
-        setUser(null);
-        setUserProfile(null);
-        setUserRole(null);
+      } catch (error) {
+        console.error('Error in auth state change:', error);
+      } finally {
+        console.log('useAuth: Setting loading to false');
+        setLoading(false);
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      console.log('useAuth: Cleaning up auth listener');
+      unsubscribe();
+    };
   }, []);
 
   const logout = async () => {
@@ -106,12 +112,19 @@ export const useAuth = (): AuthData => {
   const [canModerateSync, setCanModerateSync] = useState(false);
   
   useEffect(() => {
-    if (user) {
-      canUserModerate(user.uid, user.email || '').then(setCanModerateSync);
+    if (user && !loading) {
+      canUserModerate(user.uid, user.email || '').then(setCanModerateSync).catch(() => setCanModerateSync(false));
     } else {
       setCanModerateSync(false);
     }
-  }, [user, userRole]);
+  }, [user, userRole, loading]);
+
+  console.log('useAuth: Current state', { 
+    hasUser: !!user, 
+    hasProfile: !!userProfile, 
+    loading, 
+    isAuthenticated: !!user 
+  });
 
   return {
     user,

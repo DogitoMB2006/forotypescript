@@ -1,9 +1,10 @@
 import type { FC } from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Bell } from 'lucide-react';
+import { Bell, MessageCircle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { useChats } from '../../contexts/ChatContext';
 import Avatar from './Avatar';
 import NotificationDropdown from './NotificationDropdown';
 
@@ -14,10 +15,13 @@ const Navbar: FC = () => {
   const [scrolled, setScrolled] = useState(false);
   const { user, userProfile, logout, isAuthenticated } = useAuth();
   const { notifications } = useNotifications();
+  const { unreadChatsCount, loading: chatsLoading } = useChats();
   const location = useLocation();
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
+  
+  console.log('Navbar: Chat state:', { unreadChatsCount, chatsLoading, isAuthenticated });
 
   useEffect(() => {
     const handleScroll = () => {
@@ -65,7 +69,7 @@ const Navbar: FC = () => {
                 <div className="absolute -inset-1 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg opacity-20 group-hover:opacity-40 transition-opacity duration-200 blur"></div>
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-emerald-500 bg-clip-text text-transparent hidden sm:block">
-                DF
+                ForoTech
               </span>
             </Link>
           </div>
@@ -131,6 +135,18 @@ const Navbar: FC = () => {
           <div className="flex items-center space-x-4">
             {isAuthenticated ? (
               <>
+                <Link 
+                  to="/chats"
+                  className="relative p-2 text-slate-300 hover:text-white hover:bg-slate-800/50 rounded-full transition-all duration-200 touch-manipulation"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  {unreadChatsCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center min-w-[20px] text-[10px] font-medium">
+                      {unreadChatsCount > 99 ? '99+' : unreadChatsCount}
+                    </span>
+                  )}
+                </Link>
+
                 <div className="relative">
                   <button
                     onClick={() => setShowNotifications(!showNotifications)}

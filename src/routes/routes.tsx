@@ -9,6 +9,8 @@ import ProfilePage from '../pages/Profile';
 import Categories from '../pages/Categories';
 import CategoryDetail from '../pages/CategoryDetail';
 import Trending from '../pages/Trending';
+import ChatsPage from '../pages/ChatsPage';
+import ChatConversation from '../components/chats/ChatConversation';
 
 export const router = createBrowserRouter([
   {
@@ -46,6 +48,18 @@ export const router = createBrowserRouter([
       {
         path: '/categorias/:categoryId',
         element: <CategoryDetail />
+      },
+      {
+        path: '/chats',
+        element: <ChatsPage />
+      },
+      {
+        path: '/chats/:chatId',
+        element: (
+          <div className="h-[calc(100vh-4rem)]">
+            <ChatConversation />
+          </div>
+        )
       }
     ]
   },
