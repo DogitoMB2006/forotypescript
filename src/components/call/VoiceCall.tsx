@@ -1,6 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
-import { Phone, PhoneOff, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
-import { collection, doc, addDoc, onSnapshot, updateDoc, deleteDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  Phone, PhoneOff, Mic, MicOff, 
+  Volume2, VolumeX 
+} from 'lucide-react';
+import { 
+  doc, addDoc, collection, updateDoc, 
+  onSnapshot, getDoc, deleteDoc, serverTimestamp 
+} from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../hooks/useAuth';
 import { useCall } from '../../contexts/CallContext';
@@ -8,62 +14,68 @@ import Avatar from '../ui/Avatar';
 import MicrophoneSelector from './MicrophoneSelector';
 
 interface VoiceCallProps {
+  isIncoming: boolean;
+  callId: string;
   otherUser: {
     id: string;
-    username: string;
     displayName: string;
     profileImage?: string;
   };
   chatId: string;
   onCallEnd: () => void;
-  isIncoming?: boolean;
-  callId?: string;
 }
 
 interface CallData {
-  id: string;
   callerId: string;
   receiverId: string;
   chatId: string;
-  status: 'ringing' | 'accepted' | 'declined' | 'ended';
-  offer?: any;
-  answer?: any;
-  candidates: any[];
+  status: string;
+  offer?: RTCSessionDescriptionInit;
+  answer?: RTCSessionDescriptionInit;
+  candidates?: RTCIceCandidateInit[];
   createdAt: any;
+  lastHeartbeat?: any;
 }
 
-const VoiceCall = ({ 
-  otherUser, 
-  chatId, 
-  onCallEnd, 
-  isIncoming = false,
-  callId: initialCallId 
-}: VoiceCallProps) => {
+const VoiceCall: React.FC<VoiceCallProps> = ({
+  isIncoming,
+  callId: initialCallId,
+  otherUser,
+  chatId,
+  onCallEnd
+}) => {
   const { user } = useAuth();
-  const { endCall: resetCallContext } = useCall();
-  const [callStatus, setCallStatus] = useState<'connecting' | 'ringing' | 'connected' | 'ended'>('connecting');
-  const [isMuted, setIsMuted] = useState(false);
-  const [isSpeakerOn, setIsSpeakerOn] = useState(false);
-  const [callDuration, setCallDuration] = useState(0);
-  const [callId, setCallId] = useState<string | null>(initialCallId || null);
-  const [currentMicId, setCurrentMicId] = useState<string>('');
-  const [currentSpeakerId, setCurrentSpeakerId] = useState<string>('');
+  const { endCall: resetCallContext } = useCall(); // Renombré para evitar conflicto
   
+  const [callId, setCallId] = useState<string>(initialCallId);
+  const [callStatus, setCallStatus] = useState<'connecting' | 'ringing' | 'connected' | 'ended'>('connecting');
+  const [callDuration, setCallDuration] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isSpeakerOn, setIsSpeakerOn] = useState(true);
+  const [currentMicId, setCurrentMicId] = useState('');
+  const [currentSpeakerId, setCurrentSpeakerId] = useState('');
+  
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localAudioRef = useRef<HTMLAudioElement>(null);
   const remoteAudioRef = useRef<HTMLAudioElement>(null);
-  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
-  const localStreamRef = useRef<MediaStream | null>(null);
+  const callDocRef = useRef<any>(null);
+  const candidateQueueRef = useRef<RTCIceCandidateInit[]>([]);
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
-  const callDocRef = useRef<any>(null);
-  const candidateQueueRef = useRef<RTCIceCandidate[]>([]);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // CONFIGURACIÓN MEJORADA PARA PRODUCCIÓN
   const servers = {
     iceServers: [
+      // Servidores STUN públicos más confiables
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
       { urls: 'stun:stun.stunprotocol.org:3478' },
       { urls: 'stun:stun.services.mozilla.com' },
+      
+      // Servidores TURN gratuitos más estables
       {
         urls: 'turn:openrelay.metered.ca:80',
         username: 'openrelayproject',
@@ -71,6 +83,11 @@ const VoiceCall = ({
       },
       {
         urls: 'turn:openrelay.metered.ca:443',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      },
+      {
+        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
         username: 'openrelayproject',
         credential: 'openrelayproject'
       }
@@ -83,87 +100,182 @@ const VoiceCall = ({
 
   const initializeWebRTC = async () => {
     try {
-      console.log('VoiceCall: Initializing WebRTC');
+      console.log('VoiceCall: Initializing WebRTC for production');
       
       if (!user?.uid) {
         throw new Error('Usuario no autenticado');
       }
       
+      // Crear peer connection con configuración mejorada
       peerConnectionRef.current = new RTCPeerConnection(servers);
-      console.log('VoiceCall: Peer connection created');
+      console.log('VoiceCall: Peer connection created with enhanced config');
       
-      console.log('VoiceCall: Requesting microphone permission');
+      // CONFIGURACIÓN DE AUDIO MEJORADA PARA PRODUCCIÓN
+      console.log('VoiceCall: Requesting microphone with enhanced constraints');
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          autoGainControl: true
-        }, 
+          autoGainControl: true,
+          sampleRate: 48000, // Mejor calidad de audio
+          sampleSize: 16,
+          channelCount: 1, // Mono para mejor compatibilidad
+          latency: 0.01, // Baja latencia
+          // Añadir restricciones específicas para producción
+          googEchoCancellation: true,
+          googAutoGainControl: true,
+          googNoiseSuppression: true,
+          googHighpassFilter: true,
+          googTypingNoiseDetection: true,
+          googAudioMirroring: false
+        } as any, 
         video: false 
       });
       
-      console.log('VoiceCall: Got microphone stream');
+      console.log('VoiceCall: Got microphone stream with enhanced quality');
       localStreamRef.current = stream;
 
-      console.log('VoiceCall: Adding tracks to peer connection');
+      // CONFIGURAR TRACKS CON MEJORES PARÁMETROS
+      console.log('VoiceCall: Adding tracks with enhanced parameters');
       stream.getTracks().forEach(track => {
-        if (peerConnectionRef.current) {
-          peerConnectionRef.current.addTrack(track, stream);
-          console.log('VoiceCall: Added track:', track.kind);
+        if (peerConnectionRef.current && track.kind === 'audio') {
+          // Configurar parámetros específicos del track de audio
+          const sender = peerConnectionRef.current.addTrack(track, stream);
+          console.log('VoiceCall: Added audio track with sender:', sender);
+          
+          // Intentar configurar parámetros de encoding para mejor calidad
+          if (sender.getParameters) {
+            const params = sender.getParameters();
+            if (params.encodings && params.encodings.length > 0) {
+              params.encodings[0].maxBitrate = 64000; // 64 kbps para audio
+              params.encodings[0].priority = 'high';
+              sender.setParameters(params).catch(e => 
+                console.warn('Could not set encoding parameters:', e)
+              );
+            }
+          }
         }
       });
 
+      // Configurar audio local (silenciado para evitar feedback)
       if (localAudioRef.current) {
         localAudioRef.current.srcObject = stream;
         localAudioRef.current.muted = true;
+        localAudioRef.current.volume = 0; // Asegurar que esté silenciado
       }
 
-      console.log('VoiceCall: Setting up event handlers');
+      console.log('VoiceCall: Setting up enhanced event handlers');
       
       if (!peerConnectionRef.current) {
         throw new Error('Peer connection es null después de crear');
       }
 
+      // MANEJADOR DE TRACK REMOTO MEJORADO
       peerConnectionRef.current.ontrack = (event) => {
-        console.log('VoiceCall: Received remote track:', event.track.kind);
-        const [remoteStream] = event.streams;
+        console.log('VoiceCall: Received remote track:', event.track.kind, event.track.readyState);
         
-        if (remoteAudioRef.current) {
-          remoteAudioRef.current.srcObject = remoteStream;
-          remoteAudioRef.current.volume = isSpeakerOn ? 1.0 : 0.5;
-          console.log('VoiceCall: Remote stream set to audio element');
+        if (event.track.kind === 'audio') {
+          const [remoteStream] = event.streams;
+          console.log('VoiceCall: Setting up remote audio stream');
+          
+          if (remoteAudioRef.current) {
+            remoteAudioRef.current.srcObject = remoteStream;
+            remoteAudioRef.current.volume = isSpeakerOn ? 1.0 : 0.5;
+            
+            // FORZAR REPRODUCCIÓN PARA ASEGURAR QUE SE ESCUCHE
+            const playPromise = remoteAudioRef.current.play();
+            if (playPromise !== undefined) {
+              playPromise
+                .then(() => {
+                  console.log('VoiceCall: Remote audio playback started successfully');
+                })
+                .catch(error => {
+                  console.error('VoiceCall: Remote audio playback failed:', error);
+                  // Intentar reproducir después de una interacción del usuario
+                  document.addEventListener('click', () => {
+                    if (remoteAudioRef.current) {
+                      remoteAudioRef.current.play().catch(e => 
+                        console.error('Retry playback failed:', e)
+                      );
+                    }
+                  }, { once: true });
+                });
+            }
+          }
+          
+          // Verificar estado del track
+          event.track.onended = () => {
+            console.log('VoiceCall: Remote track ended');
+          };
+          
+          event.track.onmute = () => {
+            console.log('VoiceCall: Remote track muted');
+          };
+          
+          event.track.onunmute = () => {
+            console.log('VoiceCall: Remote track unmuted');
+          };
         }
       };
 
+      // MANEJADOR DE ICE CANDIDATES MEJORADO
       peerConnectionRef.current.onicecandidate = (event) => {
         if (event.candidate && callId) {
-          console.log('VoiceCall: ICE candidate generated');
+          console.log('VoiceCall: ICE candidate generated:', event.candidate.type);
           addIceCandidate(callId, event.candidate);
+        } else if (!event.candidate) {
+          console.log('VoiceCall: ICE gathering completed');
         }
       };
 
+      // MANEJADOR DE ESTADO DE CONEXIÓN MEJORADO
       peerConnectionRef.current.onconnectionstatechange = () => {
         if (peerConnectionRef.current) {
           const state = peerConnectionRef.current.connectionState;
           console.log('VoiceCall: Connection state changed:', state);
           
           if (state === 'connected') {
-            console.log('VoiceCall: Peer connection established');
+            console.log('VoiceCall: Peer connection established successfully');
             setCallStatus('connected');
             startCallTimer();
             startHeartbeat();
-          } else if (state === 'disconnected' || state === 'failed') {
-            console.log('VoiceCall: Connection lost, attempting to reconnect');
+            
+            // Verificar que el audio remoto esté funcionando
             setTimeout(() => {
-              if (peerConnectionRef.current?.connectionState === 'failed') {
-                endCall();
+              checkAudioFlow();
+            }, 2000);
+            
+          } else if (state === 'disconnected') {
+            console.log('VoiceCall: Connection disconnected, attempting reconnection');
+            // Intentar reconectar después de un breve delay
+            retryTimeoutRef.current = setTimeout(() => {
+              if (peerConnectionRef.current?.connectionState === 'disconnected') {
+                console.log('VoiceCall: Attempting to restart ICE');
+                peerConnectionRef.current?.restartIce();
               }
-            }, 5000);
+            }, 3000);
+            
+          } else if (state === 'failed') {
+            console.log('VoiceCall: Connection failed, ending call');
+            endCall();
           }
         }
       };
 
-      console.log('VoiceCall: WebRTC initialization completed');
+      // MANEJADOR DE ICE CONNECTION STATE
+      peerConnectionRef.current.oniceconnectionstatechange = () => {
+        if (peerConnectionRef.current) {
+          const iceState = peerConnectionRef.current.iceConnectionState;
+          console.log('VoiceCall: ICE connection state:', iceState);
+          
+          if (iceState === 'failed') {
+            console.log('VoiceCall: ICE connection failed, restarting ICE');
+            peerConnectionRef.current.restartIce();
+          }
+        }
+      };
+
+      console.log('VoiceCall: WebRTC initialization completed successfully');
 
     } catch (error) {
       console.error('Error initializing WebRTC:', error);
@@ -171,18 +283,65 @@ const VoiceCall = ({
     }
   };
 
+  // FUNCIÓN PARA VERIFICAR FLUJO DE AUDIO
+  const checkAudioFlow = () => {
+    if (remoteAudioRef.current && remoteAudioRef.current.srcObject) {
+      const stream = remoteAudioRef.current.srcObject as MediaStream;
+      const audioTracks = stream.getAudioTracks();
+      
+      audioTracks.forEach(track => {
+        console.log('VoiceCall: Remote audio track state:', {
+          kind: track.kind,
+          enabled: track.enabled,
+          muted: track.muted,
+          readyState: track.readyState
+        });
+      });
+      
+      // Asegurar que el elemento de audio esté configurado correctamente
+      if (remoteAudioRef.current.paused) {
+        remoteAudioRef.current.play().catch(e => 
+          console.error('Audio autoplay blocked:', e)
+        );
+      }
+    }
+  };
+
   const addIceCandidate = async (callDocId: string, candidate: RTCIceCandidate) => {
     try {
+      const currentCandidates = candidateQueueRef.current || [];
+      const newCandidate = {
+        candidate: candidate.candidate,
+        sdpMLineIndex: candidate.sdpMLineIndex,
+        sdpMid: candidate.sdpMid
+      };
+      
       await updateDoc(doc(db, 'calls', callDocId), {
-        candidates: [...(candidateQueueRef.current || []), {
-          candidate: candidate.candidate,
-          sdpMLineIndex: candidate.sdpMLineIndex,
-          sdpMid: candidate.sdpMid
-        }]
+        candidates: [...currentCandidates, newCandidate]
       });
+      
+      console.log('VoiceCall: ICE candidate added to Firestore');
     } catch (error) {
       console.error('Error adding ICE candidate:', error);
     }
+  };
+
+  const processQueuedCandidates = async () => {
+    if (!peerConnectionRef.current || candidateQueueRef.current.length === 0) return;
+    
+    console.log('VoiceCall: Processing queued ICE candidates:', candidateQueueRef.current.length);
+    
+    for (const candidateData of candidateQueueRef.current) {
+      try {
+        const candidate = new RTCIceCandidate(candidateData);
+        await peerConnectionRef.current.addIceCandidate(candidate);
+        console.log('VoiceCall: ICE candidate added successfully');
+      } catch (error) {
+        console.error('Error adding ICE candidate:', error);
+      }
+    }
+    
+    candidateQueueRef.current = [];
   };
 
   const setupICECandidateListener = (callDocId: string) => {
@@ -190,54 +349,38 @@ const VoiceCall = ({
       if (snapshot.exists()) {
         const data = snapshot.data();
         if (data.candidates && peerConnectionRef.current) {
-          data.candidates.forEach(async (candidateData: any) => {
-            try {
-              const candidate = new RTCIceCandidate(candidateData);
-              
-              if (peerConnectionRef.current?.remoteDescription) {
-                await peerConnectionRef.current.addIceCandidate(candidate);
-                console.log('VoiceCall: ICE candidate added');
-              } else {
-                candidateQueueRef.current.push(candidate);
-                console.log('VoiceCall: ICE candidate queued');
-              }
-            } catch (error) {
-              console.error('Error adding ICE candidate:', error);
+          const newCandidates = data.candidates.filter(
+            (candidate: any) => !candidateQueueRef.current.find(
+              (existing: any) => existing.candidate === candidate.candidate
+            )
+          );
+          
+          if (newCandidates.length > 0) {
+            console.log('VoiceCall: New ICE candidates received:', newCandidates.length);
+            candidateQueueRef.current = [...candidateQueueRef.current, ...newCandidates];
+            
+            if (peerConnectionRef.current.remoteDescription) {
+              processQueuedCandidates();
             }
-          });
+          }
         }
       }
     });
   };
 
-  const processQueuedCandidates = async () => {
-    for (const candidate of candidateQueueRef.current) {
-      try {
-        if (peerConnectionRef.current) {
-          await peerConnectionRef.current.addIceCandidate(candidate);
-          console.log('VoiceCall: Queued candidate added successfully');
-        }
-      } catch (error) {
-        console.error('Error adding queued candidate:', error);
-      }
-    }
-    
-    candidateQueueRef.current = [];
-  };
-
   const handleOutgoingWebRTC = async (callDocId: string) => {
     if (!peerConnectionRef.current) return;
 
-    console.log('VoiceCall: Setting up outgoing WebRTC connection');
-    
     try {
+      console.log('VoiceCall: Setting up outgoing WebRTC connection');
+      
       setupICECandidateListener(callDocId);
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      // Crear offer con configuraciones específicas para audio
       const offer = await peerConnectionRef.current.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: false
+        // Removí voiceActivityDetection ya que no es una opción válida
       });
       
       console.log('VoiceCall: Offer created');
@@ -251,16 +394,22 @@ const VoiceCall = ({
       });
 
       console.log('VoiceCall: Offer saved to Firestore');
-
-      onSnapshot(doc(db, 'calls', callDocId), async (snapshot) => {
+      
+      // Escuchar por la respuesta
+      onSnapshot(doc(db, 'calls', callDocId), (snapshot) => {
         if (snapshot.exists()) {
-          const data = snapshot.data();
+          const data = snapshot.data() as CallData;
           if (data.answer && peerConnectionRef.current && !peerConnectionRef.current.remoteDescription) {
             console.log('VoiceCall: Received answer, setting remote description');
             try {
-              await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.answer));
-              console.log('VoiceCall: Remote description set successfully');
-              await processQueuedCandidates();
+              peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.answer))
+                .then(() => {
+                  console.log('VoiceCall: Remote description set successfully');
+                  processQueuedCandidates();
+                })
+                .catch(error => {
+                  console.error('Error setting remote description:', error);
+                });
             } catch (error) {
               console.error('Error setting remote description:', error);
             }
@@ -291,9 +440,11 @@ const VoiceCall = ({
       console.log('VoiceCall: Setting remote description from offer');
       await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(callData.offer));
       
+      // Crear answer con configuraciones específicas
       const answer = await peerConnectionRef.current.createAnswer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: false
+        // Removí voiceActivityDetection ya que no es una opción válida
       });
       
       console.log('VoiceCall: Answer created');
@@ -312,6 +463,94 @@ const VoiceCall = ({
     } catch (error) {
       console.error('Error in incoming WebRTC setup:', error);
       throw error;
+    }
+  };
+
+  const toggleMute = () => {
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = isMuted;
+        setIsMuted(!isMuted);
+        console.log('VoiceCall: Mute toggled:', !isMuted);
+      }
+    }
+  };
+
+  const toggleSpeaker = () => {
+    const newSpeakerState = !isSpeakerOn;
+    setIsSpeakerOn(newSpeakerState);
+    console.log('VoiceCall: Speaker toggled:', newSpeakerState);
+    
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.volume = newSpeakerState ? 1.0 : 0.5;
+      
+      // Asegurar que el audio siga reproduciéndose
+      if (remoteAudioRef.current.paused) {
+        remoteAudioRef.current.play().catch(e => 
+          console.error('Error resuming audio after speaker toggle:', e)
+        );
+      }
+    }
+  };
+
+  const handleMicrophoneChange = async (deviceId: string) => {
+    try {
+      console.log('VoiceCall: Changing microphone to:', deviceId);
+      setCurrentMicId(deviceId);
+      
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+      
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        audio: { 
+          deviceId: deviceId ? { exact: deviceId } : undefined,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 48000,
+          sampleSize: 16,
+          channelCount: 1
+        },
+        video: false
+      });
+      
+      localStreamRef.current = newStream;
+      
+      if (localAudioRef.current) {
+        localAudioRef.current.srcObject = newStream;
+      }
+      
+      if (peerConnectionRef.current) {
+        const sender = peerConnectionRef.current.getSenders().find(s => 
+          s.track?.kind === 'audio'
+        );
+        
+        if (sender && newStream.getAudioTracks()[0]) {
+          await sender.replaceTrack(newStream.getAudioTracks()[0]);
+          console.log('VoiceCall: Microphone track replaced');
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error changing microphone:', error);
+      alert('No se pudo cambiar el micrófono.');
+    }
+  };
+
+  const handleSpeakerChange = async (deviceId: string) => {
+    try {
+      console.log('VoiceCall: Changing speaker to:', deviceId);
+      setCurrentSpeakerId(deviceId);
+      
+      if (remoteAudioRef.current && 'setSinkId' in remoteAudioRef.current) {
+        await (remoteAudioRef.current as any).setSinkId(deviceId);
+        console.log('VoiceCall: Speaker changed successfully');
+      }
+    } catch (error) {
+      console.error('Error changing speaker:', error);
+      alert('No se pudo cambiar el altavoz.');
     }
   };
 
@@ -349,6 +588,49 @@ const VoiceCall = ({
     }
   };
 
+  const cleanup = () => {
+    console.log('VoiceCall: Starting cleanup');
+    
+    stopCallTimer();
+    stopHeartbeat();
+    
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+    
+    if (localStreamRef.current) {
+      console.log('VoiceCall: Stopping local stream tracks');
+      localStreamRef.current.getTracks().forEach(track => {
+        track.stop();
+      });
+      localStreamRef.current = null;
+    }
+    
+    if (peerConnectionRef.current) {
+      console.log('VoiceCall: Closing peer connection');
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+    
+    if (localAudioRef.current) {
+      localAudioRef.current.srcObject = null;
+    }
+    
+    if (remoteAudioRef.current) {
+      remoteAudioRef.current.srcObject = null;
+      remoteAudioRef.current.pause();
+    }
+    
+    setCallStatus('ended');
+    setCallDuration(0);
+    setIsMuted(false);
+    setIsSpeakerOn(true);
+    candidateQueueRef.current = [];
+    
+    console.log('VoiceCall: Cleanup completed');
+  };
+
   const initializeOutgoingCall = async () => {
     console.log('VoiceCall: initializeOutgoingCall called, user:', user?.uid);
     
@@ -363,11 +645,8 @@ const VoiceCall = ({
       console.log('VoiceCall: Starting outgoing call');
       setCallStatus('connecting');
       
-      console.log('VoiceCall: Step 1 - Initializing WebRTC');
       await initializeWebRTC();
-      console.log('VoiceCall: Step 2 - WebRTC initialized successfully');
       
-      console.log('VoiceCall: Step 3 - Creating call document');
       const callDoc = await addDoc(collection(db, 'calls'), {
         callerId: user.uid,
         receiverId: otherUser.id,
@@ -379,13 +658,9 @@ const VoiceCall = ({
       const newCallId = callDoc.id;
       setCallId(newCallId);
       callDocRef.current = callDoc;
-      
-      console.log('VoiceCall: Step 4 - Call document created:', newCallId);
       setCallStatus('ringing');
       
-      console.log('VoiceCall: Step 5 - Setting up WebRTC connection');
       await handleOutgoingWebRTC(newCallId);
-      console.log('VoiceCall: Step 6 - WebRTC connection setup complete');
 
       onSnapshot(doc(db, 'calls', newCallId), (snapshot) => {
         if (snapshot.exists()) {
@@ -406,7 +681,6 @@ const VoiceCall = ({
 
     } catch (error) {
       console.error('Error initializing outgoing call:', error);
-      console.error('Error details:', error);
       alert(`Error al iniciar llamada: ${error instanceof Error ? error.message : 'Error desconocido'}`);
       onCallEnd();
     }
@@ -477,7 +751,7 @@ const VoiceCall = ({
     }
     
     cleanup();
-    resetCallContext();
+    resetCallContext(); // Ahora uso el nombre correcto
     onCallEnd();
   };
 
@@ -501,123 +775,8 @@ const VoiceCall = ({
     }
     
     cleanup();
-    resetCallContext();
+    resetCallContext(); // Ahora uso el nombre correcto
     onCallEnd();
-  };
-
-  const toggleMute = () => {
-    if (localStreamRef.current) {
-      const audioTrack = localStreamRef.current.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = isMuted;
-        setIsMuted(!isMuted);
-        console.log('VoiceCall: Mute toggled:', !isMuted);
-      }
-    }
-  };
-
-  const toggleSpeaker = () => {
-    setIsSpeakerOn(!isSpeakerOn);
-    console.log('VoiceCall: Speaker toggled:', !isSpeakerOn);
-    
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.volume = !isSpeakerOn ? 1.0 : 0.5;
-    }
-  };
-
-  const handleMicrophoneChange = async (deviceId: string) => {
-    try {
-      console.log('VoiceCall: Changing microphone to:', deviceId);
-      setCurrentMicId(deviceId);
-      
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(track => track.stop());
-      }
-      
-      const newStream = await navigator.mediaDevices.getUserMedia({
-        audio: { 
-          deviceId: deviceId ? { exact: deviceId } : undefined,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        },
-        video: false
-      });
-      
-      localStreamRef.current = newStream;
-      
-      if (localAudioRef.current) {
-        localAudioRef.current.srcObject = newStream;
-      }
-      
-      if (peerConnectionRef.current) {
-        const sender = peerConnectionRef.current.getSenders().find(s => 
-          s.track?.kind === 'audio'
-        );
-        
-        if (sender && newStream.getAudioTracks()[0]) {
-          await sender.replaceTrack(newStream.getAudioTracks()[0]);
-          console.log('VoiceCall: Microphone track replaced');
-        }
-      }
-      
-    } catch (error) {
-      console.error('Error changing microphone:', error);
-      alert('No se pudo cambiar el micrófono.');
-    }
-  };
-
-  const handleSpeakerChange = async (deviceId: string) => {
-    try {
-      console.log('VoiceCall: Changing speaker to:', deviceId);
-      setCurrentSpeakerId(deviceId);
-      
-      if (remoteAudioRef.current && 'setSinkId' in remoteAudioRef.current) {
-        await (remoteAudioRef.current as any).setSinkId(deviceId);
-        console.log('VoiceCall: Speaker changed successfully');
-      }
-    } catch (error) {
-      console.error('Error changing speaker:', error);
-      alert('No se pudo cambiar el altavoz.');
-    }
-  };
-
-  const cleanup = () => {
-    console.log('VoiceCall: Starting cleanup');
-    
-    stopCallTimer();
-    stopHeartbeat();
-    
-    if (localStreamRef.current) {
-      console.log('VoiceCall: Stopping local stream tracks');
-      localStreamRef.current.getTracks().forEach(track => {
-        track.stop();
-      });
-      localStreamRef.current = null;
-    }
-    
-    if (peerConnectionRef.current) {
-      console.log('VoiceCall: Closing peer connection');
-      peerConnectionRef.current.close();
-      peerConnectionRef.current = null;
-    }
-    
-    if (localAudioRef.current) {
-      localAudioRef.current.srcObject = null;
-    }
-    
-    if (remoteAudioRef.current) {
-      remoteAudioRef.current.srcObject = null;
-      remoteAudioRef.current.pause();
-    }
-    
-    setCallStatus('ended');
-    setCallDuration(0);
-    setIsMuted(false);
-    setIsSpeakerOn(false);
-    candidateQueueRef.current = [];
-    
-    console.log('VoiceCall: Cleanup completed');
   };
 
   const formatTime = (seconds: number) => {
@@ -644,7 +803,6 @@ const VoiceCall = ({
   useEffect(() => {
     console.log('VoiceCall: Component mounted', { isIncoming, callId: initialCallId, user: user?.uid });
     
-    // Esperar a que el usuario esté disponible
     if (!user?.uid) {
       console.log('VoiceCall: Waiting for user authentication...');
       return;
@@ -679,8 +837,38 @@ const VoiceCall = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-      <audio ref={localAudioRef} muted autoPlay />
-      <audio ref={remoteAudioRef} autoPlay />
+      {/* ELEMENTOS DE AUDIO CON CONFIGURACIÓN MEJORADA */}
+      <audio 
+        ref={localAudioRef} 
+        muted 
+        autoPlay
+        playsInline
+        style={{ display: 'none' }}
+      />
+      <audio 
+        ref={remoteAudioRef} 
+        autoPlay
+        playsInline
+        controls={false}
+        style={{ display: 'none' }}
+        onLoadedMetadata={() => {
+          console.log('VoiceCall: Remote audio metadata loaded');
+          if (remoteAudioRef.current) {
+            remoteAudioRef.current.play().catch(e => 
+              console.error('Auto-play failed:', e)
+            );
+          }
+        }}
+        onCanPlay={() => {
+          console.log('VoiceCall: Remote audio can play');
+        }}
+        onPlay={() => {
+          console.log('VoiceCall: Remote audio started playing');
+        }}
+        onError={(e) => {
+          console.error('VoiceCall: Remote audio error:', e);
+        }}
+      />
       
       <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full mx-4 text-center">
         <div className="mb-8">
@@ -700,6 +888,7 @@ const VoiceCall = ({
           </div>
         </div>
 
+        {/* BOTONES PARA LLAMADA ENTRANTE */}
         {callStatus === 'ringing' && isIncoming && (
           <div className="flex justify-center space-x-6 mb-6">
             <button
@@ -717,6 +906,7 @@ const VoiceCall = ({
           </div>
         )}
 
+        {/* CONTROLES PARA LLAMADA SALIENTE MIENTRAS SUENA */}
         {(callStatus === 'connecting' || callStatus === 'ringing') && !isIncoming && (
           <div className="flex justify-center items-center space-x-4 mb-6">
             <div className="flex items-center space-x-1">
@@ -732,9 +922,17 @@ const VoiceCall = ({
                 isDisabled={false}
               />
             </div>
+            
+            <button
+              onClick={endCall}
+              className="w-12 h-12 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center transition-colors"
+            >
+              <PhoneOff className="w-6 h-6 text-white" />
+            </button>
           </div>
         )}
 
+        {/* CONTROLES COMPLETOS DURANTE LA LLAMADA */}
         {(callStatus === 'connected' || callStatus === 'connecting' || (callStatus === 'ringing' && !isIncoming)) && (
           <div className="flex justify-center items-center space-x-4">
             <div className="flex items-center space-x-1">
@@ -783,6 +981,15 @@ const VoiceCall = ({
             >
               <PhoneOff className="w-6 h-6 text-white" />
             </button>
+          </div>
+        )}
+
+        {/* INDICADOR DE ESTADO DE CONEXIÓN PARA DEBUG */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-4 text-xs text-gray-500">
+            Status: {callStatus} | 
+            PC State: {peerConnectionRef.current?.connectionState || 'none'} |
+            ICE State: {peerConnectionRef.current?.iceConnectionState || 'none'}
           </div>
         )}
       </div>

@@ -18,6 +18,22 @@
         {
           "key": "Access-Control-Allow-Headers",
           "value": "Content-Type, Authorization"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "microphone=*, camera=*, display-capture=*, autoplay=*, geolocation=*, midi=*, notifications=*, push=*, sync-xhr=*, microphone=*, camera=*, magnetometer=*, gyroscope=*, speaker=*, vibrate=*, fullscreen=*"
+        },
+        {
+          "key": "Feature-Policy",
+          "value": "microphone *; camera *; autoplay *; encrypted-media *; picture-in-picture *"
+        },
+        {
+          "key": "Cross-Origin-Embedder-Policy",
+          "value": "unsafe-none"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
         }
       ]
     }
