@@ -65,6 +65,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const listenerCleanupRef = useRef<(() => void)[]>([]); // Para limpiar listeners
 
   // CONFIGURACIÓN MEJORADA PARA PRODUCCIÓN
   const servers = {
@@ -493,7 +494,14 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   };
 
   const setupICECandidateListener = (callDocId: string) => {
-    onSnapshot(doc(db, 'calls', callDocId), (snapshot) => {
+    // Evitar múltiples listeners para el mismo callId
+    const existingListener = listenerCleanupRef.current.find(cleanup => cleanup.toString().includes(callDocId));
+    if (existingListener) {
+      console.log('VoiceCall: ICE listener already exists for this call');
+      return;
+    }
+
+    const unsubscribe = onSnapshot(doc(db, 'calls', callDocId), (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
         if (data.candidates && peerConnectionRef.current) {
@@ -514,6 +522,9 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
         }
       }
     });
+
+    // Guardar función de cleanup
+    listenerCleanupRef.current.push(unsubscribe);
   };
 
   const handleOutgoingWebRTC = async (callDocId: string) => {
@@ -543,24 +554,32 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
 
       console.log('VoiceCall: Offer saved to Firestore');
       
-      // Escuchar por la respuesta
-      onSnapshot(doc(db, 'calls', callDocId), (snapshot) => {
+      // Escuchar por la respuesta - MEJORADO PARA EVITAR MÚLTIPLES SET
+      const unsubscribe = onSnapshot(doc(db, 'calls', callDocId), (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data() as CallData;
-          if (data.answer && peerConnectionRef.current && !peerConnectionRef.current.remoteDescription) {
-            console.log('VoiceCall: Received answer, setting remote description');
-            try {
-              peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.answer))
-                .then(() => {
-                  console.log('VoiceCall: Remote description set successfully');
-                  processQueuedCandidates();
-                })
-                .catch(error => {
-                  console.error('Error setting remote description:', error);
-                });
-            } catch (error) {
-              console.error('Error setting remote description:', error);
-            }
+          
+          // VERIFICAR ESTADO ANTES DE ESTABLECER REMOTE DESCRIPTION
+          if (data.answer && 
+              peerConnectionRef.current && 
+              peerConnectionRef.current.signalingState === 'have-local-offer' &&
+              !peerConnectionRef.current.remoteDescription) {
+            
+            console.log('VoiceCall: Received answer, setting remote description (state:', peerConnectionRef.current.signalingState, ')');
+            
+            peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.answer))
+              .then(() => {
+                console.log('VoiceCall: ✅ Remote description set successfully');
+                processQueuedCandidates();
+                // Detener el listener una vez que se establece la conexión
+                unsubscribe();
+              })
+              .catch(error => {
+                console.error('VoiceCall: ❌ Error setting remote description:', error);
+                console.log('VoiceCall: Current signaling state:', peerConnectionRef.current?.signalingState);
+              });
+          } else if (data.answer && peerConnectionRef.current?.remoteDescription) {
+            console.log('VoiceCall: Answer already processed, ignoring duplicate');
           }
         }
       });
@@ -585,7 +604,13 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       const callData = callDoc.data();
       if (!callData.offer) return;
 
-      console.log('VoiceCall: Setting remote description from offer');
+      // VERIFICAR ESTADO ANTES DE ESTABLECER REMOTE DESCRIPTION
+      if (peerConnectionRef.current.signalingState !== 'stable') {
+        console.log('VoiceCall: Connection not in stable state:', peerConnectionRef.current.signalingState);
+        return;
+      }
+
+      console.log('VoiceCall: Setting remote description from offer (state:', peerConnectionRef.current.signalingState, ')');
       await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(callData.offer));
       
       // Crear answer con configuraciones específicas
@@ -753,6 +778,16 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     
     stopCallTimer();
     stopHeartbeat();
+    
+    // Limpiar todos los listeners de Firestore
+    listenerCleanupRef.current.forEach(unsubscribe => {
+      try {
+        unsubscribe();
+      } catch (error) {
+        console.warn('Error cleaning up listener:', error);
+      }
+    });
+    listenerCleanupRef.current = [];
     
     if (retryTimeoutRef.current) {
       clearTimeout(retryTimeoutRef.current);
