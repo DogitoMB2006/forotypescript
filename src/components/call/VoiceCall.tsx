@@ -406,15 +406,27 @@ const VoiceCall = ({
   };
 
   const startHeartbeat = () => {
+    // Limpiar heartbeat anterior si existe
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+    }
+    
     heartbeatRef.current = setInterval(async () => {
-      if (callId) {
+      // Verificar que aún tenemos un callId y que el componente no se desmontó
+      if (callId && callStatus !== 'ended') {
         try {
           await updateDoc(doc(db, 'calls', callId), {
             lastHeartbeat: serverTimestamp()
           });
+          console.log('VoiceCall: Heartbeat sent successfully');
         } catch (error) {
-          console.error('Error sending heartbeat:', error);
+          console.log('VoiceCall: Heartbeat failed (document may be deleted):', error);
+          // Si el documento no existe, detener el heartbeat
+          stopHeartbeat();
         }
+      } else {
+        console.log('VoiceCall: Stopping heartbeat - no callId or call ended');
+        stopHeartbeat();
       }
     }, 30000);
   };
@@ -545,12 +557,27 @@ const VoiceCall = ({
   const declineCall = async () => {
     if (!callId) return;
 
+    console.log('VoiceCall: Declining call');
+    
+    // Detener heartbeat inmediatamente
+    stopHeartbeat();
+    stopCallTimer();
+
     try {
-      await updateDoc(doc(db, 'calls', callId), {
-        status: 'declined'
-      });
+      // Verificar si el documento existe antes de actualizarlo
+      const callDocSnapshot = await getDoc(doc(db, 'calls', callId));
+      
+      if (callDocSnapshot.exists()) {
+        await updateDoc(doc(db, 'calls', callId), {
+          status: 'declined',
+          declinedAt: serverTimestamp()
+        });
+        console.log('VoiceCall: Call declined in database');
+      } else {
+        console.log('VoiceCall: Call document no longer exists when declining');
+      }
     } catch (error) {
-      console.error('Error declining call:', error);
+      console.log('VoiceCall: Error declining call (document may be deleted):', error);
     }
     
     cleanup();
@@ -559,21 +586,41 @@ const VoiceCall = ({
   };
 
   const endCall = async () => {
+    console.log('VoiceCall: Starting endCall process');
+    
+    // Detener heartbeat inmediatamente para evitar errores
+    stopHeartbeat();
+    stopCallTimer();
+    
     if (callId) {
       try {
-        await updateDoc(doc(db, 'calls', callId), {
-          status: 'ended'
-        });
+        // Verificar si el documento aún existe antes de actualizarlo
+        const callDocSnapshot = await getDoc(doc(db, 'calls', callId));
         
-        setTimeout(async () => {
-          try {
-            await deleteDoc(doc(db, 'calls', callId));
-          } catch (error) {
-            console.error('Error deleting call doc:', error);
-          }
-        }, 5000);
+        if (callDocSnapshot.exists()) {
+          await updateDoc(doc(db, 'calls', callId), {
+            status: 'ended',
+            endedAt: serverTimestamp()
+          });
+          console.log('VoiceCall: Call status updated to ended');
+          
+          // Eliminar el documento después de un delay más corto
+          setTimeout(async () => {
+            try {
+              const finalCheck = await getDoc(doc(db, 'calls', callId));
+              if (finalCheck.exists()) {
+                await deleteDoc(doc(db, 'calls', callId));
+                console.log('VoiceCall: Call document deleted');
+              }
+            } catch (error) {
+              console.log('VoiceCall: Document may have been already deleted:', error);
+            }
+          }, 2000); // Reducido de 5000 a 2000ms
+        } else {
+          console.log('VoiceCall: Call document no longer exists');
+        }
       } catch (error) {
-        console.error('Error ending call:', error);
+        console.log('VoiceCall: Error updating call status (document may be deleted):', error);
       }
     }
     
@@ -662,6 +709,7 @@ const VoiceCall = ({
   const cleanup = () => {
     console.log('VoiceCall: Starting cleanup');
     
+    // Detener timers primero para evitar race conditions
     stopCallTimer();
     stopHeartbeat();
     
@@ -688,6 +736,7 @@ const VoiceCall = ({
       remoteAudioRef.current.pause();
     }
     
+    // Resetear estados
     setCallStatus('ended');
     setCallDuration(0);
     setIsMuted(false);
