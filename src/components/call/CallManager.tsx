@@ -1,4 +1,3 @@
-
 import { useState, forwardRef, useImperativeHandle } from 'react';
 import { useIncomingCalls } from '../../hooks/useIncomingCalls';
 import VoiceCallComponent from './VoiceCall';
@@ -146,8 +145,7 @@ const CallManager = forwardRef<CallManagerRef, CallManagerProps>(({ children }, 
           chatId={activeCall.chatId}
           onCallEnd={handleCallEnd}
           isIncoming={activeCall.isIncoming}
-          callId={activeCall.callId}
-        />
+          callId={activeCall.callId || ''}        />
       )}
 
       {activeChannel && (

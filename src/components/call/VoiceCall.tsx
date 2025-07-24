@@ -15,7 +15,7 @@ import MicrophoneSelector from './MicrophoneSelector';
 
 interface VoiceCallProps {
   isIncoming: boolean;
-  callId: string;
+  callId: string; // Cambiado de opcional a requerido, pero manejamos string vacío
   otherUser: {
     id: string;
     displayName: string;
@@ -47,7 +47,8 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   const { user } = useAuth();
   const { endCall: resetCallContext } = useCall(); // Renombré para evitar conflicto
   
-  const [callId, setCallId] = useState<string>(initialCallId);
+  // Manejar callId vacío para llamadas salientes
+  const [callId, setCallId] = useState<string>(initialCallId || '');
   const [callStatus, setCallStatus] = useState<'connecting' | 'ringing' | 'connected' | 'ended'>('connecting');
   const [callDuration, setCallDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
