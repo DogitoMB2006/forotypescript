@@ -5,6 +5,7 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { CallProvider } from './contexts/CallContext';
 import CallManager from './components/call/CallManager';
+import type { CallManagerRef } from './components/call/CallManager';
 import { useRoleChangeListener } from './hooks/useRoleChangeListener';
 import { useChatNotifications } from './hooks/useChatNotifications';
 import NotificationPermissionBanner from './components/ui/NotificationPermissionBanner';
@@ -16,8 +17,8 @@ function AppContent() {
   useRoleChangeListener();
   useChatNotifications();
   
-  const callManagerRef = useRef<any>(null);
-
+  // Tipado específico para CallManager ref
+  const callManagerRef = useRef<CallManagerRef>(null);
 
   useEffect(() => {
     if (callManagerRef.current) {
