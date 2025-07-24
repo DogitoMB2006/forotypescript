@@ -15,7 +15,7 @@ import MicrophoneSelector from './MicrophoneSelector';
 
 interface VoiceCallProps {
   isIncoming: boolean;
-  callId: string; // Cambiado de opcional a requerido, pero manejamos string vacío
+  callId: string;
   otherUser: {
     id: string;
     displayName: string;
@@ -45,9 +45,8 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   onCallEnd
 }) => {
   const { user } = useAuth();
-  const { endCall: resetCallContext } = useCall(); // Renombré para evitar conflicto
+  const { endCall: resetCallContext } = useCall();
   
-  // Manejar callId vacío para llamadas salientes
   const [callId, setCallId] = useState<string>(initialCallId || '');
   const [callStatus, setCallStatus] = useState<'connecting' | 'ringing' | 'connected' | 'ended'>('connecting');
   const [callDuration, setCallDuration] = useState(0);
@@ -65,26 +64,17 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   const callTimerRef = useRef<NodeJS.Timeout | null>(null);
   const heartbeatRef = useRef<NodeJS.Timeout | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const listenerCleanupRef = useRef<(() => void)[]>([]); // Para limpiar listeners
+  const listenerCleanupRef = useRef<(() => void)[]>([]);
 
-  // CONFIGURACIÓN MEJORADA PARA PRODUCCIÓN
   const servers = {
     iceServers: [
-      // Servidores STUN públicos más confiables
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
       { urls: 'stun:stun2.l.google.com:19302' },
       { urls: 'stun:stun.stunprotocol.org:3478' },
       { urls: 'stun:stun.services.mozilla.com' },
-      
-      // Servidores TURN gratuitos más estables
       {
-        urls: 'turn:openrelay.metered.ca:80',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:443',
+        urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443'],
         username: 'openrelayproject',
         credential: 'openrelayproject'
       },
@@ -92,249 +82,156 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
         urls: 'turn:openrelay.metered.ca:443?transport=tcp',
         username: 'openrelayproject',
         credential: 'openrelayproject'
+      },
+      {
+        urls: ['turn:relay.metered.ca:80', 'turn:relay.metered.ca:443'],
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      },
+      {
+        urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
+        username: 'webrtc',
+        credential: 'webrtc'
+      },
+      {
+        urls: 'turn:numb.viagenie.ca',
+        username: 'webrtc@live.com',
+        credential: 'muazkh'
       }
     ],
-    iceCandidatePoolSize: 10,
+    iceCandidatePoolSize: 20,
     bundlePolicy: 'max-bundle' as RTCBundlePolicy,
     rtcpMuxPolicy: 'require' as RTCRtcpMuxPolicy,
-    iceTransportPolicy: 'all' as RTCIceTransportPolicy
+    iceTransportPolicy: 'all' as RTCIceTransportPolicy,
+    iceGatheringPolicy: 'all' as any
   };
 
-  const initializeWebRTC = async () => {
-    try {
-      console.log('VoiceCall: Initializing WebRTC for production');
-      
-      if (!user?.uid) {
-        throw new Error('Usuario no autenticado');
-      }
-      
-      // Crear peer connection con configuración mejorada
-      peerConnectionRef.current = new RTCPeerConnection(servers);
-      console.log('VoiceCall: Peer connection created with enhanced config');
-      
-      // CONFIGURACIÓN DE AUDIO MEJORADA PARA PRODUCCIÓN
-      console.log('VoiceCall: Requesting microphone with enhanced constraints');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          sampleRate: 48000, // Mejor calidad de audio
-          sampleSize: 16,
-          channelCount: 1, // Mono para mejor compatibilidad
-          latency: 0.01, // Baja latencia
-          // Añadir restricciones específicas para producción
-          googEchoCancellation: true,
-          googAutoGainControl: true,
-          googNoiseSuppression: true,
-          googHighpassFilter: true,
-          googTypingNoiseDetection: true,
-          googAudioMirroring: false
-        } as any, 
-        video: false 
-      });
-      
-      console.log('VoiceCall: Got microphone stream with enhanced quality');
-      localStreamRef.current = stream;
-
-      // CONFIGURAR TRACKS CON MEJORES PARÁMETROS
-      console.log('VoiceCall: Adding tracks with enhanced parameters');
-      stream.getTracks().forEach(track => {
-        if (peerConnectionRef.current && track.kind === 'audio') {
-          // Configurar parámetros específicos del track de audio
-          const sender = peerConnectionRef.current.addTrack(track, stream);
-          console.log('VoiceCall: Added audio track with sender:', sender);
-          
-          // Intentar configurar parámetros de encoding para mejor calidad
-          if (sender.getParameters) {
-            const params = sender.getParameters();
-            if (params.encodings && params.encodings.length > 0) {
-              params.encodings[0].maxBitrate = 64000; // 64 kbps para audio
-              params.encodings[0].priority = 'high';
-              sender.setParameters(params).catch(e => 
-                console.warn('Could not set encoding parameters:', e)
-              );
-            }
-          }
-        }
-      });
-
-      // Configurar audio local (silenciado para evitar feedback)
-      if (localAudioRef.current) {
-        localAudioRef.current.srcObject = stream;
-        localAudioRef.current.muted = true;
-        localAudioRef.current.volume = 0; // Asegurar que esté silenciado
-      }
-
-      console.log('VoiceCall: Setting up enhanced event handlers');
-      
-      if (!peerConnectionRef.current) {
-        throw new Error('Peer connection es null después de crear');
-      }
-
-      // MANEJADOR DE TRACK REMOTO MEJORADO
-      peerConnectionRef.current.ontrack = (event) => {
-        console.log('VoiceCall: Received remote track:', event.track.kind, event.track.readyState);
-        
-        if (event.track.kind === 'audio') {
-          const [remoteStream] = event.streams;
-          console.log('VoiceCall: Setting up remote audio stream');
-          
-          if (remoteAudioRef.current) {
-            remoteAudioRef.current.srcObject = remoteStream;
-            remoteAudioRef.current.volume = 1.0; // Establecer volumen máximo
-            
-            // MÚLTIPLES INTENTOS DE REPRODUCCIÓN
-            const attemptPlay = async () => {
-              try {
-                console.log('VoiceCall: Attempting to play remote audio...');
-                if (remoteAudioRef.current) {
-                  remoteAudioRef.current.volume = 1.0; // Asegurar volumen antes de reproducir
-                  await remoteAudioRef.current.play();
-                  console.log('VoiceCall: ✅ Remote audio started playing successfully');
-                }
-              } catch (error) {
-                console.error('VoiceCall: ❌ Auto-play failed:', error);
-                
-                // Crear un botón invisible para activar audio en la siguiente interacción
-                const playButton = document.createElement('button');
-                playButton.style.position = 'fixed';
-                playButton.style.top = '10px';
-                playButton.style.right = '10px';
-                playButton.style.zIndex = '10000';
-                playButton.style.backgroundColor = 'red';
-                playButton.style.color = 'white';
-                playButton.style.padding = '10px';
-                playButton.style.border = 'none';
-                playButton.style.borderRadius = '5px';
-                playButton.textContent = '🔊 Activar Audio';
-                
-                playButton.onclick = async () => {
-                  try {
-                    if (remoteAudioRef.current) {
-                      await remoteAudioRef.current.play();
-                      console.log('VoiceCall: ✅ Manual audio activation successful');
-                      document.body.removeChild(playButton);
-                    }
-                  } catch (e) {
-                    console.error('VoiceCall: Manual play also failed:', e);
-                  }
-                };
-                
-                document.body.appendChild(playButton);
-                
-                // Remover botón después de 10 segundos
-                setTimeout(() => {
-                  if (document.body.contains(playButton)) {
-                    document.body.removeChild(playButton);
-                  }
-                }, 10000);
-              }
-            };
-            
-            // Intentar reproducir inmediatamente
-            attemptPlay();
-            
-            // También intentar cuando el metadata esté cargado
-            remoteAudioRef.current.onloadedmetadata = () => {
-              console.log('VoiceCall: Remote audio metadata loaded');
-              attemptPlay();
-            };
-            
-            // Y cuando pueda reproducirse
-            remoteAudioRef.current.oncanplay = () => {
-              console.log('VoiceCall: Remote audio can play');
-              attemptPlay();
-            };
-          }
-          
-          // Verificar estado del track
-          event.track.onended = () => {
-            console.log('VoiceCall: Remote track ended');
-          };
-          
-          event.track.onmute = () => {
-            console.log('VoiceCall: Remote track muted');
-          };
-          
-          event.track.onunmute = () => {
-            console.log('VoiceCall: Remote track unmuted');
-            // Intentar reproducir cuando se desmutee
-            if (remoteAudioRef.current) {
-              remoteAudioRef.current.play().catch(e => 
-                console.error('Play on unmute failed:', e)
-              );
-            }
-          };
-        }
-      };
-
-      // MANEJADOR DE ICE CANDIDATES MEJORADO
-      peerConnectionRef.current.onicecandidate = (event) => {
-        if (event.candidate && callId) {
-          console.log('VoiceCall: ICE candidate generated:', event.candidate.type);
-          addIceCandidate(callId, event.candidate);
-        } else if (!event.candidate) {
-          console.log('VoiceCall: ICE gathering completed');
-        }
-      };
-
-      // MANEJADOR DE ESTADO DE CONEXIÓN MEJORADO
-      peerConnectionRef.current.onconnectionstatechange = () => {
-        if (peerConnectionRef.current) {
-          const state = peerConnectionRef.current.connectionState;
-          console.log('VoiceCall: Connection state changed:', state);
-          
-          if (state === 'connected') {
-            console.log('VoiceCall: Peer connection established successfully');
-            setCallStatus('connected');
-            startCallTimer();
-            startHeartbeat();
-            
-            // VERIFICAR Y FORZAR AUDIO CUANDO SE CONECTE
-            setTimeout(() => {
-              checkAndForceAudio();
-            }, 1000);
-            
-          } else if (state === 'disconnected') {
-            console.log('VoiceCall: Connection disconnected, attempting reconnection');
-            // Intentar reconectar después de un breve delay
-            retryTimeoutRef.current = setTimeout(() => {
-              if (peerConnectionRef.current?.connectionState === 'disconnected') {
-                console.log('VoiceCall: Attempting to restart ICE');
-                peerConnectionRef.current?.restartIce();
-              }
-            }, 3000);
-            
-          } else if (state === 'failed') {
-            console.log('VoiceCall: Connection failed, ending call');
-            endCall();
-          }
-        }
-      };
-
-      // MANEJADOR DE ICE CONNECTION STATE
-      peerConnectionRef.current.oniceconnectionstatechange = () => {
-        if (peerConnectionRef.current) {
-          const iceState = peerConnectionRef.current.iceConnectionState;
-          console.log('VoiceCall: ICE connection state:', iceState);
-          
-          if (iceState === 'failed') {
-            console.log('VoiceCall: ICE connection failed, restarting ICE');
-            peerConnectionRef.current.restartIce();
-          }
-        }
-      };
-
-      console.log('VoiceCall: WebRTC initialization completed successfully');
-
-    } catch (error) {
-      console.error('Error initializing WebRTC:', error);
-      throw error;
+  const stopCallTimer = () => {
+    if (callTimerRef.current) {
+      clearInterval(callTimerRef.current);
+      callTimerRef.current = null;
     }
   };
 
-  // FUNCIÓN MEJORADA PARA VERIFICAR Y FORZAR AUDIO
+  const stopHeartbeat = () => {
+    if (heartbeatRef.current) {
+      clearInterval(heartbeatRef.current);
+      heartbeatRef.current = null;
+    }
+  };
+
+  const showConnectivityError = () => {
+    if (document.getElementById('connectivity-error-prompt')) return;
+    
+    const errorPrompt = document.createElement('div');
+    errorPrompt.id = 'connectivity-error-prompt';
+    errorPrompt.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #dc2626;
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      z-index: 10000;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 16px;
+      text-align: center;
+      max-width: 400px;
+      border: 2px solid #fca5a5;
+    `;
+    
+    errorPrompt.innerHTML = `
+      <div style="margin-bottom: 15px; font-size: 24px;">🌐</div>
+      <h3 style="margin: 0 0 10px 0; font-size: 18px; font-weight: 600;">
+        Problema de Conectividad
+      </h3>
+      <p style="margin: 0 0 15px 0; line-height: 1.5; opacity: 0.9;">
+        No se pudo establecer conexión de audio entre diferentes redes. 
+        Esto es común con servidores TURN gratuitos.
+      </p>
+      <button onclick="this.parentElement.remove()" style="
+        background: white;
+        color: #dc2626;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 500;
+        cursor: pointer;
+      ">
+        Entendido
+      </button>
+    `;
+    
+    document.body.appendChild(errorPrompt);
+    
+    setTimeout(() => {
+      if (document.body.contains(errorPrompt)) {
+        document.body.removeChild(errorPrompt);
+      }
+    }, 10000);
+  };
+
+  const showAudioActivationPrompt = () => {
+    if (document.getElementById('audio-activation-prompt')) return;
+    
+    const prompt = document.createElement('div');
+    prompt.id = 'audio-activation-prompt';
+    prompt.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ef4444;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 10000;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      animation: slideDown 0.3s ease-out;
+    `;
+    
+    prompt.innerHTML = `🔊 Hacer clic para activar audio de la llamada`;
+    
+    prompt.onclick = async () => {
+      try {
+        if (remoteAudioRef.current) {
+          await remoteAudioRef.current.play();
+          console.log('VoiceCall: ✅ Audio activated by user interaction');
+          document.body.removeChild(prompt);
+        }
+      } catch (error) {
+        console.error('VoiceCall: Failed to activate audio:', error);
+      }
+    };
+    
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideDown {
+        from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
+        to { transform: translateX(-50%) translateY(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.appendChild(prompt);
+    
+    setTimeout(() => {
+      if (document.body.contains(prompt)) {
+        document.body.removeChild(prompt);
+      }
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    }, 15000);
+  };
+
   const checkAndForceAudio = () => {
     console.log('VoiceCall: 🔍 Checking audio status...');
     
@@ -364,7 +261,6 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
         readyState: audioElement.readyState
       });
       
-      // Si está pausado, intentar reproducir
       if (audioElement.paused) {
         console.log('VoiceCall: 🔄 Audio is paused, attempting to play...');
         audioElement.play()
@@ -373,15 +269,12 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
           })
           .catch(error => {
             console.error('VoiceCall: ❌ Failed to resume audio:', error);
-            
-            // Mostrar indicador visual para que el usuario active el audio
             showAudioActivationPrompt();
           });
       } else {
         console.log('VoiceCall: ✅ Audio is already playing');
       }
       
-      // Verificar si hay señal de audio
       if (audioTracks.length > 0 && audioTracks[0].readyState === 'live') {
         console.log('VoiceCall: ✅ Audio track is live and ready');
       } else {
@@ -391,69 +284,202 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       console.log('VoiceCall: ❌ No remote audio stream found');
     }
   };
-  
-  // FUNCIÓN PARA MOSTRAR PROMPT DE ACTIVACIÓN DE AUDIO
-  const showAudioActivationPrompt = () => {
-    // Solo mostrar si no existe ya
-    if (document.getElementById('audio-activation-prompt')) return;
-    
-    const prompt = document.createElement('div');
-    prompt.id = 'audio-activation-prompt';
-    prompt.style.cssText = `
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #ef4444;
-      color: white;
-      padding: 12px 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      z-index: 10000;
-      font-family: system-ui, -apple-system, sans-serif;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      animation: slideDown 0.3s ease-out;
-    `;
-    
-    prompt.innerHTML = `
-      🔊 Hacer clic para activar audio de la llamada
-    `;
-    
-    prompt.onclick = async () => {
-      try {
-        if (remoteAudioRef.current) {
-          await remoteAudioRef.current.play();
-          console.log('VoiceCall: ✅ Audio activated by user interaction');
-          document.body.removeChild(prompt);
+
+  const initializeWebRTC = async () => {
+    try {
+      console.log('VoiceCall: Initializing WebRTC for production');
+      
+      if (!user?.uid) {
+        throw new Error('Usuario no autenticado');
+      }
+      
+      peerConnectionRef.current = new RTCPeerConnection(servers);
+      console.log('VoiceCall: Peer connection created with enhanced config');
+      
+      console.log('VoiceCall: Requesting microphone with enhanced constraints');
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 48000,
+          sampleSize: 16,
+          channelCount: 1,
+          latency: 0.01,
+          googEchoCancellation: true,
+          googAutoGainControl: true,
+          googNoiseSuppression: true,
+          googHighpassFilter: true,
+          googTypingNoiseDetection: true,
+          googAudioMirroring: false
+        } as any, 
+        video: false 
+      });
+      
+      console.log('VoiceCall: Got microphone stream with enhanced quality');
+      localStreamRef.current = stream;
+
+      console.log('VoiceCall: Adding tracks with enhanced parameters');
+      stream.getTracks().forEach(track => {
+        if (peerConnectionRef.current && track.kind === 'audio') {
+          const sender = peerConnectionRef.current.addTrack(track, stream);
+          console.log('VoiceCall: Added audio track with sender:', sender);
+          
+          if (sender.getParameters) {
+            const params = sender.getParameters();
+            if (params.encodings && params.encodings.length > 0) {
+              params.encodings[0].maxBitrate = 64000;
+              params.encodings[0].priority = 'high';
+              sender.setParameters(params).catch(e => 
+                console.warn('Could not set encoding parameters:', e)
+              );
+            }
+          }
         }
-      } catch (error) {
-        console.error('VoiceCall: Failed to activate audio:', error);
+      });
+
+      if (localAudioRef.current) {
+        localAudioRef.current.srcObject = stream;
+        localAudioRef.current.muted = true;
+        localAudioRef.current.volume = 0;
       }
-    };
-    
-    // Agregar animación CSS
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes slideDown {
-        from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
-        to { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+      console.log('VoiceCall: Setting up enhanced event handlers');
+      
+      if (!peerConnectionRef.current) {
+        throw new Error('Peer connection es null después de crear');
       }
-    `;
-    document.head.appendChild(style);
-    
-    document.body.appendChild(prompt);
-    
-    // Auto-remover después de 15 segundos
-    setTimeout(() => {
-      if (document.body.contains(prompt)) {
-        document.body.removeChild(prompt);
-      }
-      if (document.head.contains(style)) {
-        document.head.removeChild(style);
-      }
-    }, 15000);
+
+      peerConnectionRef.current.ontrack = (event) => {
+        console.log('VoiceCall: Received remote track:', event.track.kind, event.track.readyState);
+        
+        if (event.track.kind === 'audio') {
+          const [remoteStream] = event.streams;
+          console.log('VoiceCall: Setting up remote audio stream');
+          
+          if (remoteAudioRef.current) {
+            remoteAudioRef.current.srcObject = remoteStream;
+            remoteAudioRef.current.volume = 1.0;
+            
+            const attemptPlay = async () => {
+              try {
+                console.log('VoiceCall: Attempting to play remote audio...');
+                if (remoteAudioRef.current) {
+                  remoteAudioRef.current.volume = 1.0;
+                  await remoteAudioRef.current.play();
+                  console.log('VoiceCall: ✅ Remote audio started playing successfully');
+                }
+              } catch (error) {
+                console.error('VoiceCall: ❌ Auto-play failed:', error);
+                showAudioActivationPrompt();
+              }
+            };
+            
+            attemptPlay();
+            
+            remoteAudioRef.current.onloadedmetadata = () => {
+              console.log('VoiceCall: Remote audio metadata loaded');
+              attemptPlay();
+            };
+            
+            remoteAudioRef.current.oncanplay = () => {
+              console.log('VoiceCall: Remote audio can play');
+              attemptPlay();
+            };
+          }
+          
+          event.track.onended = () => {
+            console.log('VoiceCall: Remote track ended');
+          };
+          
+          event.track.onmute = () => {
+            console.log('VoiceCall: Remote track muted');
+          };
+          
+          event.track.onunmute = () => {
+            console.log('VoiceCall: Remote track unmuted');
+            if (remoteAudioRef.current) {
+              remoteAudioRef.current.play().catch(e => 
+                console.error('Play on unmute failed:', e)
+              );
+            }
+          };
+        }
+      };
+
+      peerConnectionRef.current.onicecandidate = (event) => {
+        if (event.candidate && callId) {
+          console.log('VoiceCall: ICE candidate generated:', event.candidate.type);
+          addIceCandidate(callId, event.candidate);
+        } else if (!event.candidate) {
+          console.log('VoiceCall: ICE gathering completed');
+        }
+      };
+
+      peerConnectionRef.current.onconnectionstatechange = () => {
+        if (peerConnectionRef.current) {
+          const state = peerConnectionRef.current.connectionState;
+          console.log('VoiceCall: Connection state changed:', state);
+          
+          if (state === 'connected') {
+            console.log('VoiceCall: Peer connection established successfully');
+            setCallStatus('connected');
+            startCallTimer();
+            startHeartbeat();
+            
+            setTimeout(() => {
+              checkAndForceAudio();
+            }, 1000);
+            
+          } else if (state === 'disconnected') {
+            console.log('VoiceCall: Connection disconnected, attempting reconnection');
+            retryTimeoutRef.current = setTimeout(() => {
+              if (peerConnectionRef.current?.connectionState === 'disconnected') {
+                console.log('VoiceCall: Attempting to restart ICE');
+                peerConnectionRef.current?.restartIce();
+              }
+            }, 3000);
+            
+          } else if (state === 'failed') {
+            console.log('VoiceCall: Connection failed, ending call');
+            endCall();
+          }
+        }
+      };
+
+      peerConnectionRef.current.oniceconnectionstatechange = () => {
+        if (peerConnectionRef.current) {
+          const iceState = peerConnectionRef.current.iceConnectionState;
+          const connectionState = peerConnectionRef.current.connectionState;
+          console.log('VoiceCall: 🧊 ICE connection state:', iceState);
+          console.log('VoiceCall: 🔗 Connection state:', connectionState);
+          
+          if (iceState === 'checking') {
+            console.log('VoiceCall: 🔍 Trying to establish connection through NAT/Firewall...');
+          } else if (iceState === 'connected') {
+            console.log('VoiceCall: ✅ ICE connection established successfully!');
+          } else if (iceState === 'completed') {
+            console.log('VoiceCall: 🎉 ICE connection completed - optimal path found!');
+          } else if (iceState === 'failed') {
+            console.log('VoiceCall: ❌ ICE connection failed - NAT/Firewall traversal failed');
+            console.log('VoiceCall: 💡 This usually means TURN servers are not working properly');
+            
+            showConnectivityError();
+            
+            console.log('VoiceCall: 🔄 Attempting ICE restart...');
+            peerConnectionRef.current.restartIce();
+          } else if (iceState === 'disconnected') {
+            console.log('VoiceCall: ⚠️ ICE connection temporarily lost - attempting to reconnect...');
+          }
+        }
+      };
+
+      console.log('VoiceCall: WebRTC initialization completed successfully');
+
+    } catch (error) {
+      console.error('Error initializing WebRTC:', error);
+      throw error;
+    }
   };
 
   const addIceCandidate = async (callDocId: string, candidate: RTCIceCandidate) => {
@@ -494,8 +520,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
   };
 
   const setupICECandidateListener = (callDocId: string) => {
-    // Evitar múltiples listeners para el mismo callId
-    const existingListener = listenerCleanupRef.current.find(cleanup => cleanup.toString().includes(callDocId));
+    const existingListener = listenerCleanupRef.current.find((cleanup: any) => cleanup.toString().includes(callDocId));
     if (existingListener) {
       console.log('VoiceCall: ICE listener already exists for this call');
       return;
@@ -523,7 +548,6 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       }
     });
 
-    // Guardar función de cleanup
     listenerCleanupRef.current.push(unsubscribe);
   };
 
@@ -535,11 +559,9 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       
       setupICECandidateListener(callDocId);
       
-      // Crear offer con configuraciones específicas para audio
       const offer = await peerConnectionRef.current.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: false
-        // Removí voiceActivityDetection ya que no es una opción válida
       });
       
       console.log('VoiceCall: Offer created');
@@ -554,12 +576,10 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
 
       console.log('VoiceCall: Offer saved to Firestore');
       
-      // Escuchar por la respuesta - MEJORADO PARA EVITAR MÚLTIPLES SET
       const unsubscribe = onSnapshot(doc(db, 'calls', callDocId), (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data() as CallData;
           
-          // VERIFICAR ESTADO ANTES DE ESTABLECER REMOTE DESCRIPTION
           if (data.answer && 
               peerConnectionRef.current && 
               peerConnectionRef.current.signalingState === 'have-local-offer' &&
@@ -571,7 +591,6 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
               .then(() => {
                 console.log('VoiceCall: ✅ Remote description set successfully');
                 processQueuedCandidates();
-                // Detener el listener una vez que se establece la conexión
                 unsubscribe();
               })
               .catch(error => {
@@ -604,7 +623,6 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       const callData = callDoc.data();
       if (!callData.offer) return;
 
-      // VERIFICAR ESTADO ANTES DE ESTABLECER REMOTE DESCRIPTION
       if (peerConnectionRef.current.signalingState !== 'stable') {
         console.log('VoiceCall: Connection not in stable state:', peerConnectionRef.current.signalingState);
         return;
@@ -613,11 +631,9 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
       console.log('VoiceCall: Setting remote description from offer (state:', peerConnectionRef.current.signalingState, ')');
       await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(callData.offer));
       
-      // Crear answer con configuraciones específicas
       const answer = await peerConnectionRef.current.createAnswer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: false
-        // Removí voiceActivityDetection ya que no es una opción válida
       });
       
       console.log('VoiceCall: Answer created');
@@ -658,7 +674,6 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     if (remoteAudioRef.current) {
       remoteAudioRef.current.volume = newSpeakerState ? 1.0 : 0.5;
       
-      // Asegurar que el audio siga reproduciéndose
       if (remoteAudioRef.current.paused) {
         remoteAudioRef.current.play().catch(e => 
           console.error('Error resuming audio after speaker toggle:', e)
@@ -733,31 +748,21 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     }, 1000);
   };
 
-  const stopCallTimer = () => {
-    if (callTimerRef.current) {
-      clearInterval(callTimerRef.current);
-      callTimerRef.current = null;
-    }
-  };
-
   const startHeartbeat = () => {
     heartbeatRef.current = setInterval(async () => {
       if (callId && callStatus === 'connected') {
         try {
-          // Verificar si el documento existe antes de actualizarlo
           const callDoc = await getDoc(doc(db, 'calls', callId));
           if (callDoc.exists()) {
             await updateDoc(doc(db, 'calls', callId), {
               lastHeartbeat: serverTimestamp()
             });
           } else {
-            // Si el documento no existe, parar el heartbeat
             console.log('VoiceCall: Call document no longer exists, stopping heartbeat');
             stopHeartbeat();
           }
         } catch (error) {
           console.warn('VoiceCall: Heartbeat failed (normal during call end):', error);
-          // No mostrar error si la llamada ya terminó
           if (callStatus === 'connected') {
             stopHeartbeat();
           }
@@ -766,21 +771,13 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     }, 30000);
   };
 
-  const stopHeartbeat = () => {
-    if (heartbeatRef.current) {
-      clearInterval(heartbeatRef.current);
-      heartbeatRef.current = null;
-    }
-  };
-
   const cleanup = () => {
     console.log('VoiceCall: Starting cleanup');
     
     stopCallTimer();
     stopHeartbeat();
     
-    // Limpiar todos los listeners de Firestore
-    listenerCleanupRef.current.forEach(unsubscribe => {
+    listenerCleanupRef.current.forEach((unsubscribe: any) => {
       try {
         unsubscribe();
       } catch (error) {
@@ -824,6 +821,41 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     candidateQueueRef.current = [];
     
     console.log('VoiceCall: Cleanup completed');
+  };
+
+  const endCall = async () => {
+    console.log('VoiceCall: Ending call...');
+    
+    stopHeartbeat();
+    
+    if (callId) {
+      try {
+        const callDoc = await getDoc(doc(db, 'calls', callId));
+        if (callDoc.exists()) {
+          await updateDoc(doc(db, 'calls', callId), {
+            status: 'ended'
+          });
+          
+          setTimeout(async () => {
+            try {
+              const callDocCheck = await getDoc(doc(db, 'calls', callId));
+              if (callDocCheck.exists()) {
+                await deleteDoc(doc(db, 'calls', callId));
+                console.log('VoiceCall: Call document deleted');
+              }
+            } catch (error) {
+              console.warn('VoiceCall: Could not delete call doc (may have been deleted already):', error);
+            }
+          }, 5000);
+        }
+      } catch (error) {
+        console.warn('VoiceCall: Error ending call (document may not exist):', error);
+      }
+    }
+    
+    cleanup();
+    resetCallContext();
+    onCallEnd();
   };
 
   const initializeOutgoingCall = async () => {
@@ -946,31 +978,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     }
     
     cleanup();
-    resetCallContext(); // Ahora uso el nombre correcto
-    onCallEnd();
-  };
-
-  const endCall = async () => {
-    if (callId) {
-      try {
-        await updateDoc(doc(db, 'calls', callId), {
-          status: 'ended'
-        });
-        
-        setTimeout(async () => {
-          try {
-            await deleteDoc(doc(db, 'calls', callId));
-          } catch (error) {
-            console.error('Error deleting call doc:', error);
-          }
-        }, 5000);
-      } catch (error) {
-        console.error('Error ending call:', error);
-      }
-    }
-    
-    cleanup();
-    resetCallContext(); // Ahora uso el nombre correcto
+    resetCallContext();
     onCallEnd();
   };
 
@@ -1015,7 +1023,6 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     };
   }, [user?.uid, isIncoming, initialCallId]);
 
-  // Mostrar loading mientras esperamos autenticación
   if (!user?.uid) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
@@ -1032,7 +1039,6 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-      {/* ELEMENTOS DE AUDIO CON CONFIGURACIÓN MEJORADA */}
       <audio 
         ref={localAudioRef} 
         muted 
@@ -1049,7 +1055,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
         onLoadedMetadata={() => {
           console.log('VoiceCall: 📡 Remote audio metadata loaded');
           if (remoteAudioRef.current) {
-            remoteAudioRef.current.volume = 1.0; // Establecer volumen aquí
+            remoteAudioRef.current.volume = 1.0;
             remoteAudioRef.current.play().catch(e => 
               console.error('Auto-play on metadata failed:', e)
             );
@@ -1058,7 +1064,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
         onCanPlay={() => {
           console.log('VoiceCall: 🎵 Remote audio can play');
           if (remoteAudioRef.current) {
-            remoteAudioRef.current.volume = 1.0; // Asegurar volumen máximo
+            remoteAudioRef.current.volume = 1.0;
             remoteAudioRef.current.play().catch(e => 
               console.error('Auto-play on canplay failed:', e)
             );
@@ -1067,7 +1073,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
         onPlay={() => {
           console.log('VoiceCall: ▶️ Remote audio started playing');
           if (remoteAudioRef.current) {
-            remoteAudioRef.current.volume = 1.0; // Asegurar volumen cuando empiece a reproducir
+            remoteAudioRef.current.volume = 1.0;
           }
         }}
         onPause={() => {
@@ -1099,7 +1105,6 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
           </div>
         </div>
 
-        {/* BOTONES PARA LLAMADA ENTRANTE */}
         {callStatus === 'ringing' && isIncoming && (
           <div className="flex justify-center space-x-6 mb-6">
             <button
@@ -1117,7 +1122,6 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
           </div>
         )}
 
-        {/* CONTROLES PARA LLAMADA SALIENTE MIENTRAS SUENA */}
         {(callStatus === 'connecting' || callStatus === 'ringing') && !isIncoming && (
           <div className="flex justify-center items-center space-x-4 mb-6">
             <div className="flex items-center space-x-1">
@@ -1143,8 +1147,7 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
           </div>
         )}
 
-        {/* CONTROLES COMPLETOS DURANTE LA LLAMADA */}
-        {(callStatus === 'connected' || callStatus === 'connecting' || (callStatus === 'ringing' && !isIncoming)) && (
+        {callStatus === 'connected' && (
           <div className="flex justify-center items-center space-x-4">
             <div className="flex items-center space-x-1">
               <button
@@ -1195,7 +1198,6 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
           </div>
         )}
 
-        {/* INDICADOR DE ESTADO DE CONEXIÓN PARA DEBUG */}
         {process.env.NODE_ENV === 'development' && (
           <div className="mt-4 text-xs text-gray-500">
             Status: {callStatus} | 
