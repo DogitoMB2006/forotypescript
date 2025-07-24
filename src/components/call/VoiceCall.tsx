@@ -60,25 +60,49 @@ const VoiceCall = ({
 
   const servers = {
     iceServers: [
+      // STUN servers principales
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
       { urls: 'stun:stun.stunprotocol.org:3478' },
       { urls: 'stun:stun.services.mozilla.com' },
+      
+      // TURN servers principales
       {
-        urls: 'turn:openrelay.metered.ca:80',
+        urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443'],
         username: 'openrelayproject',
         credential: 'openrelayproject'
       },
+      
+      // TURN servers alternativos
       {
-        urls: 'turn:openrelay.metered.ca:443',
+        urls: 'turn:relay1.expressturn.com:3478',
+        username: 'ef3CYGPRL0GUPE4R4R',
+        credential: 'bR79wKjBKx0LL6m9'
+      },
+      
+      // Más TURN servers de respaldo
+      {
+        urls: ['turn:numb.viagenie.ca:3478'],
+        username: 'webrtc@live.com',
+        credential: 'muazkh'
+      },
+      
+      // TURN servers adicionales con TCP/UDP
+      {
+        urls: [
+          'turn:openrelay.metered.ca:80?transport=tcp',
+          'turn:openrelay.metered.ca:443?transport=tcp'
+        ],
         username: 'openrelayproject',
         credential: 'openrelayproject'
       }
     ],
-    iceCandidatePoolSize: 10,
+    iceCandidatePoolSize: 20,
     bundlePolicy: 'max-bundle' as RTCBundlePolicy,
     rtcpMuxPolicy: 'require' as RTCRtcpMuxPolicy,
-    iceTransportPolicy: 'all' as RTCIceTransportPolicy
+    iceTransportPolicy: 'all' as RTCIceTransportPolicy,
+    iceGatheringState: 'gathering'
   };
 
   const initializeWebRTC = async () => {
@@ -145,21 +169,52 @@ const VoiceCall = ({
       peerConnectionRef.current.onconnectionstatechange = () => {
         if (peerConnectionRef.current) {
           const state = peerConnectionRef.current.connectionState;
-          console.log('VoiceCall: Connection state changed:', state);
+          const iceState = peerConnectionRef.current.iceConnectionState;
+          console.log('VoiceCall: Connection state changed:', state, 'ICE state:', iceState);
           
           if (state === 'connected') {
             console.log('VoiceCall: Peer connection established');
             setCallStatus('connected');
             startCallTimer();
             startHeartbeat();
-          } else if (state === 'disconnected' || state === 'failed') {
-            console.log('VoiceCall: Connection lost, attempting to reconnect');
+          } else if (state === 'connecting') {
+            console.log('VoiceCall: Still connecting...');
+          } else if (state === 'disconnected') {
+            console.log('VoiceCall: Connection temporarily lost, waiting for reconnection...');
+            // Dar más tiempo para reconectar antes de fallar
             setTimeout(() => {
-              if (peerConnectionRef.current?.connectionState === 'failed') {
+              if (peerConnectionRef.current?.connectionState === 'disconnected') {
+                console.log('VoiceCall: Connection still disconnected after timeout');
                 endCall();
               }
-            }, 5000);
+            }, 10000); // 10 segundos en lugar de 5
+          } else if (state === 'failed') {
+            console.log('VoiceCall: Connection failed permanently');
+            alert('La conexión falló. Esto puede deberse a problemas de red o firewall.');
+            endCall();
           }
+        }
+      };
+
+      peerConnectionRef.current.oniceconnectionstatechange = () => {
+        if (peerConnectionRef.current) {
+          const iceState = peerConnectionRef.current.iceConnectionState;
+          console.log('VoiceCall: ICE connection state changed:', iceState);
+          
+          if (iceState === 'failed') {
+            console.log('VoiceCall: ICE connection failed, restarting ICE...');
+            peerConnectionRef.current.restartIce();
+          } else if (iceState === 'disconnected') {
+            console.log('VoiceCall: ICE disconnected, waiting for reconnection...');
+          } else if (iceState === 'connected' || iceState === 'completed') {
+            console.log('VoiceCall: ICE connection successful!');
+          }
+        }
+      };
+
+      peerConnectionRef.current.onicegatheringstatechange = () => {
+        if (peerConnectionRef.current) {
+          console.log('VoiceCall: ICE gathering state:', peerConnectionRef.current.iceGatheringState);
         }
       };
 
@@ -233,11 +288,33 @@ const VoiceCall = ({
     try {
       setupICECandidateListener(callDocId);
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Esperar a que se complete la recolección de ICE candidates
+      console.log('VoiceCall: Waiting for ICE gathering...');
+      await new Promise((resolve) => {
+        if (peerConnectionRef.current?.iceGatheringState === 'complete') {
+          resolve(void 0);
+          return;
+        }
+        
+        const timeout = setTimeout(() => {
+          console.log('VoiceCall: ICE gathering timeout, proceeding anyway');
+          resolve(void 0);
+        }, 5000);
+        
+        peerConnectionRef.current!.addEventListener('icegatheringstatechange', function onStateChange() {
+          if (peerConnectionRef.current?.iceGatheringState === 'complete') {
+            console.log('VoiceCall: ICE gathering completed');
+            clearTimeout(timeout);
+            peerConnectionRef.current?.removeEventListener('icegatheringstatechange', onStateChange);
+            resolve(void 0);
+          }
+        });
+      });
       
       const offer = await peerConnectionRef.current.createOffer({
         offerToReceiveAudio: true,
-        offerToReceiveVideo: false
+        offerToReceiveVideo: false,
+        iceRestart: false
       });
       
       console.log('VoiceCall: Offer created');
