@@ -129,11 +129,16 @@ const VoiceCall = ({
       console.log('VoiceCall: Got microphone stream');
       localStreamRef.current = stream;
 
-      console.log('VoiceCall: Adding tracks to peer connection');
+      console.log('🎤 VoiceCall: Adding tracks to peer connection');
       stream.getTracks().forEach(track => {
         if (peerConnectionRef.current) {
+          console.log('🎤 Adding track:', {
+            kind: track.kind,
+            enabled: track.enabled,
+            readyState: track.readyState,
+            id: track.id
+          });
           peerConnectionRef.current.addTrack(track, stream);
-          console.log('VoiceCall: Added track:', track.kind);
         }
       });
 
@@ -150,31 +155,76 @@ const VoiceCall = ({
       }
 
       peerConnectionRef.current.ontrack = (event) => {
-        console.log('VoiceCall: Received remote track:', event.track.kind);
+        console.log('🎵 VoiceCall: ontrack event fired!');
+        console.log('🎵 Event details:', {
+          streams: event.streams.length,
+          track: event.track,
+          trackKind: event.track.kind,
+          trackEnabled: event.track.enabled,
+          trackReadyState: event.track.readyState
+        });
+        
         const [remoteStream] = event.streams;
         
-        if (remoteAudioRef.current && remoteStream) {
-          console.log('VoiceCall: Setting remote stream to audio element');
-          remoteAudioRef.current.srcObject = remoteStream;
-          remoteAudioRef.current.volume = 1.0; // Volumen máximo inicialmente
-          remoteAudioRef.current.muted = false;
+        if (remoteStream) {
+          console.log('🎵 Remote stream details:', {
+            id: remoteStream.id,
+            active: remoteStream.active,
+            tracks: remoteStream.getTracks().map(t => ({
+              kind: t.kind,
+              enabled: t.enabled,
+              readyState: t.readyState
+            }))
+          });
           
-          // Intentar reproducir inmediatamente
-          remoteAudioRef.current.play().then(() => {
-            console.log('VoiceCall: Remote audio started playing successfully');
-          }).catch(error => {
-            console.error('VoiceCall: Error playing remote audio:', error);
-            // Reintentar después de un momento
+          if (remoteAudioRef.current) {
+            console.log('🎵 Setting remote stream to audio element');
+            remoteAudioRef.current.srcObject = remoteStream;
+            remoteAudioRef.current.volume = 1.0;
+            remoteAudioRef.current.muted = false;
+            
+            // Event listeners para debugging
+            remoteAudioRef.current.onloadedmetadata = () => {
+              console.log('🎵 Remote audio metadata loaded');
+            };
+            
+            remoteAudioRef.current.oncanplay = () => {
+              console.log('🎵 Remote audio can play');
+            };
+            
+            remoteAudioRef.current.onplay = () => {
+              console.log('🎵 Remote audio started playing');
+            };
+            
+            remoteAudioRef.current.onerror = (e) => {
+              console.error('🎵 Remote audio error:', e);
+            };
+            
+            // Forzar reproducción
             setTimeout(() => {
               if (remoteAudioRef.current) {
-                remoteAudioRef.current.play().catch(e => 
-                  console.error('VoiceCall: Retry play failed:', e)
-                );
+                console.log('🎵 Attempting to play remote audio...');
+                remoteAudioRef.current.play()
+                  .then(() => {
+                    console.log('🎵 ✅ Remote audio playing successfully!');
+                    console.log('🎵 Audio element state:', {
+                      paused: remoteAudioRef.current?.paused,
+                      volume: remoteAudioRef.current?.volume,
+                      muted: remoteAudioRef.current?.muted,
+                      currentTime: remoteAudioRef.current?.currentTime
+                    });
+                  })
+                  .catch(error => {
+                    console.error('🎵 ❌ Remote audio play failed:', error);
+                  });
               }
-            }, 1000);
-          });
+            }, 500);
+            
+          } else {
+            console.error('🎵 ❌ No remote audio ref available!');
+          }
         } else {
-          console.error('VoiceCall: No remote audio ref or stream available');
+          console.error('🎵 ❌ No remote stream in event!');
         }
       };
 
@@ -192,18 +242,41 @@ const VoiceCall = ({
           console.log('VoiceCall: Connection state changed:', state, 'ICE state:', iceState);
           
           if (state === 'connected') {
-            console.log('VoiceCall: Peer connection established');
+            console.log('🔗 VoiceCall: Peer connection established');
             setCallStatus('connected');
             startCallTimer();
             startHeartbeat();
             
-            // Asegurar que el audio remoto esté configurado correctamente
-            if (remoteAudioRef.current) {
-              console.log('VoiceCall: Ensuring remote audio is playing');
-              remoteAudioRef.current.play().catch(e => 
-                console.log('VoiceCall: Remote audio play on connect failed:', e)
-              );
-            }
+            // Debug completo del estado
+            setTimeout(() => {
+              console.log('🔍 CONNECTION DEBUG SUMMARY:');
+              console.log('🔍 Local stream tracks:', localStreamRef.current?.getTracks().map(t => ({
+                kind: t.kind,
+                enabled: t.enabled,
+                readyState: t.readyState
+              })));
+              
+              console.log('🔍 Peer connection state:', {
+                connectionState: peerConnectionRef.current?.connectionState,
+                iceConnectionState: peerConnectionRef.current?.iceConnectionState,
+                signalingState: peerConnectionRef.current?.signalingState
+              });
+              
+              console.log('🔍 Remote audio element:', {
+                srcObject: remoteAudioRef.current?.srcObject,
+                volume: remoteAudioRef.current?.volume,
+                muted: remoteAudioRef.current?.muted,
+                paused: remoteAudioRef.current?.paused
+              });
+              
+              // Intentar reproducir nuevamente
+              if (remoteAudioRef.current && remoteAudioRef.current.srcObject) {
+                console.log('🔍 Forcing remote audio play on connection...');
+                remoteAudioRef.current.play().catch(e => 
+                  console.log('🔍 Force play failed:', e)
+                );
+              }
+            }, 2000);
           } else if (state === 'connecting') {
             console.log('VoiceCall: Still connecting...');
           } else if (state === 'disconnected') {
@@ -842,7 +915,15 @@ const VoiceCall = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
       {/* Audio local - siempre muteado para evitar feedback */}
-      <audio ref={localAudioRef} muted autoPlay playsInline />
+      <audio 
+        ref={localAudioRef} 
+        muted 
+        autoPlay 
+        playsInline 
+        onLoadedMetadata={() => console.log('🎤 Local audio metadata loaded')}
+        onPlay={() => console.log('🎤 Local audio started')}
+        onError={(e) => console.error('🎤 Local audio error:', e)}
+      />
       
       {/* Audio remoto - para escuchar al otro usuario */}
       <audio 
@@ -851,7 +932,36 @@ const VoiceCall = ({
         playsInline
         controls={false}
         style={{ display: 'none' }}
+        onLoadedMetadata={() => console.log('🎵 Remote audio metadata loaded')}
+        onCanPlay={() => console.log('🎵 Remote audio can play')}
+        onPlay={() => console.log('🎵 Remote audio started playing')}
+        onPause={() => console.log('🎵 Remote audio paused')}
+        onError={(e) => console.error('🎵 Remote audio error:', e)}
+        onVolumeChange={() => console.log('🎵 Remote audio volume changed:', remoteAudioRef.current?.volume)}
       />
+      
+      {/* Botón de debug temporal */}
+      {callStatus === 'connected' && (
+        <button
+          onClick={() => {
+            console.log('🔍 MANUAL DEBUG CHECK:');
+            console.log('🔍 Remote audio ref:', remoteAudioRef.current);
+            console.log('🔍 Remote audio srcObject:', remoteAudioRef.current?.srcObject);
+            console.log('🔍 Remote audio volume:', remoteAudioRef.current?.volume);
+            console.log('🔍 Remote audio muted:', remoteAudioRef.current?.muted);
+            console.log('🔍 Remote audio paused:', remoteAudioRef.current?.paused);
+            
+            if (remoteAudioRef.current) {
+              remoteAudioRef.current.play()
+                .then(() => console.log('🔍 Manual play successful'))
+                .catch(e => console.log('🔍 Manual play failed:', e));
+            }
+          }}
+          className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded z-50"
+        >
+          Debug Audio
+        </button>
+      )}
       
       <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full mx-4 text-center">
         <div className="mb-8">
