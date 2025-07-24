@@ -181,27 +181,70 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
           
           if (remoteAudioRef.current) {
             remoteAudioRef.current.srcObject = remoteStream;
-            remoteAudioRef.current.volume = isSpeakerOn ? 1.0 : 0.5;
+            remoteAudioRef.current.volume = 1.0; // Establecer volumen máximo
             
-            // FORZAR REPRODUCCIÓN PARA ASEGURAR QUE SE ESCUCHE
-            const playPromise = remoteAudioRef.current.play();
-            if (playPromise !== undefined) {
-              playPromise
-                .then(() => {
-                  console.log('VoiceCall: Remote audio playback started successfully');
-                })
-                .catch(error => {
-                  console.error('VoiceCall: Remote audio playback failed:', error);
-                  // Intentar reproducir después de una interacción del usuario
-                  document.addEventListener('click', () => {
+            // MÚLTIPLES INTENTOS DE REPRODUCCIÓN
+            const attemptPlay = async () => {
+              try {
+                console.log('VoiceCall: Attempting to play remote audio...');
+                if (remoteAudioRef.current) {
+                  remoteAudioRef.current.volume = 1.0; // Asegurar volumen antes de reproducir
+                  await remoteAudioRef.current.play();
+                  console.log('VoiceCall: ✅ Remote audio started playing successfully');
+                }
+              } catch (error) {
+                console.error('VoiceCall: ❌ Auto-play failed:', error);
+                
+                // Crear un botón invisible para activar audio en la siguiente interacción
+                const playButton = document.createElement('button');
+                playButton.style.position = 'fixed';
+                playButton.style.top = '10px';
+                playButton.style.right = '10px';
+                playButton.style.zIndex = '10000';
+                playButton.style.backgroundColor = 'red';
+                playButton.style.color = 'white';
+                playButton.style.padding = '10px';
+                playButton.style.border = 'none';
+                playButton.style.borderRadius = '5px';
+                playButton.textContent = '🔊 Activar Audio';
+                
+                playButton.onclick = async () => {
+                  try {
                     if (remoteAudioRef.current) {
-                      remoteAudioRef.current.play().catch(e => 
-                        console.error('Retry playback failed:', e)
-                      );
+                      await remoteAudioRef.current.play();
+                      console.log('VoiceCall: ✅ Manual audio activation successful');
+                      document.body.removeChild(playButton);
                     }
-                  }, { once: true });
-                });
-            }
+                  } catch (e) {
+                    console.error('VoiceCall: Manual play also failed:', e);
+                  }
+                };
+                
+                document.body.appendChild(playButton);
+                
+                // Remover botón después de 10 segundos
+                setTimeout(() => {
+                  if (document.body.contains(playButton)) {
+                    document.body.removeChild(playButton);
+                  }
+                }, 10000);
+              }
+            };
+            
+            // Intentar reproducir inmediatamente
+            attemptPlay();
+            
+            // También intentar cuando el metadata esté cargado
+            remoteAudioRef.current.onloadedmetadata = () => {
+              console.log('VoiceCall: Remote audio metadata loaded');
+              attemptPlay();
+            };
+            
+            // Y cuando pueda reproducirse
+            remoteAudioRef.current.oncanplay = () => {
+              console.log('VoiceCall: Remote audio can play');
+              attemptPlay();
+            };
           }
           
           // Verificar estado del track
@@ -215,6 +258,12 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
           
           event.track.onunmute = () => {
             console.log('VoiceCall: Remote track unmuted');
+            // Intentar reproducir cuando se desmutee
+            if (remoteAudioRef.current) {
+              remoteAudioRef.current.play().catch(e => 
+                console.error('Play on unmute failed:', e)
+              );
+            }
           };
         }
       };
@@ -241,10 +290,10 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
             startCallTimer();
             startHeartbeat();
             
-            // Verificar que el audio remoto esté funcionando
+            // VERIFICAR Y FORZAR AUDIO CUANDO SE CONECTE
             setTimeout(() => {
-              checkAudioFlow();
-            }, 2000);
+              checkAndForceAudio();
+            }, 1000);
             
           } else if (state === 'disconnected') {
             console.log('VoiceCall: Connection disconnected, attempting reconnection');
@@ -284,28 +333,126 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
     }
   };
 
-  // FUNCIÓN PARA VERIFICAR FLUJO DE AUDIO
-  const checkAudioFlow = () => {
+  // FUNCIÓN MEJORADA PARA VERIFICAR Y FORZAR AUDIO
+  const checkAndForceAudio = () => {
+    console.log('VoiceCall: 🔍 Checking audio status...');
+    
     if (remoteAudioRef.current && remoteAudioRef.current.srcObject) {
       const stream = remoteAudioRef.current.srcObject as MediaStream;
       const audioTracks = stream.getAudioTracks();
       
-      audioTracks.forEach(track => {
-        console.log('VoiceCall: Remote audio track state:', {
+      console.log('VoiceCall: Audio tracks found:', audioTracks.length);
+      
+      audioTracks.forEach((track, index) => {
+        console.log(`VoiceCall: Track ${index}:`, {
           kind: track.kind,
           enabled: track.enabled,
           muted: track.muted,
-          readyState: track.readyState
+          readyState: track.readyState,
+          label: track.label
         });
       });
       
-      // Asegurar que el elemento de audio esté configurado correctamente
-      if (remoteAudioRef.current.paused) {
-        remoteAudioRef.current.play().catch(e => 
-          console.error('Audio autoplay blocked:', e)
-        );
+      const audioElement = remoteAudioRef.current;
+      console.log('VoiceCall: Audio element state:', {
+        paused: audioElement.paused,
+        volume: audioElement.volume,
+        muted: audioElement.muted,
+        currentTime: audioElement.currentTime,
+        duration: audioElement.duration,
+        readyState: audioElement.readyState
+      });
+      
+      // Si está pausado, intentar reproducir
+      if (audioElement.paused) {
+        console.log('VoiceCall: 🔄 Audio is paused, attempting to play...');
+        audioElement.play()
+          .then(() => {
+            console.log('VoiceCall: ✅ Audio resumed successfully');
+          })
+          .catch(error => {
+            console.error('VoiceCall: ❌ Failed to resume audio:', error);
+            
+            // Mostrar indicador visual para que el usuario active el audio
+            showAudioActivationPrompt();
+          });
+      } else {
+        console.log('VoiceCall: ✅ Audio is already playing');
       }
+      
+      // Verificar si hay señal de audio
+      if (audioTracks.length > 0 && audioTracks[0].readyState === 'live') {
+        console.log('VoiceCall: ✅ Audio track is live and ready');
+      } else {
+        console.log('VoiceCall: ⚠️ Audio track may not be ready');
+      }
+    } else {
+      console.log('VoiceCall: ❌ No remote audio stream found');
     }
+  };
+  
+  // FUNCIÓN PARA MOSTRAR PROMPT DE ACTIVACIÓN DE AUDIO
+  const showAudioActivationPrompt = () => {
+    // Solo mostrar si no existe ya
+    if (document.getElementById('audio-activation-prompt')) return;
+    
+    const prompt = document.createElement('div');
+    prompt.id = 'audio-activation-prompt';
+    prompt.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #ef4444;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 10000;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      animation: slideDown 0.3s ease-out;
+    `;
+    
+    prompt.innerHTML = `
+      🔊 Hacer clic para activar audio de la llamada
+    `;
+    
+    prompt.onclick = async () => {
+      try {
+        if (remoteAudioRef.current) {
+          await remoteAudioRef.current.play();
+          console.log('VoiceCall: ✅ Audio activated by user interaction');
+          document.body.removeChild(prompt);
+        }
+      } catch (error) {
+        console.error('VoiceCall: Failed to activate audio:', error);
+      }
+    };
+    
+    // Agregar animación CSS
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideDown {
+        from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
+        to { transform: translateX(-50%) translateY(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+    
+    document.body.appendChild(prompt);
+    
+    // Auto-remover después de 15 segundos
+    setTimeout(() => {
+      if (document.body.contains(prompt)) {
+        document.body.removeChild(prompt);
+      }
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    }, 15000);
   };
 
   const addIceCandidate = async (callDocId: string, candidate: RTCIceCandidate) => {
@@ -570,13 +717,25 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
 
   const startHeartbeat = () => {
     heartbeatRef.current = setInterval(async () => {
-      if (callId) {
+      if (callId && callStatus === 'connected') {
         try {
-          await updateDoc(doc(db, 'calls', callId), {
-            lastHeartbeat: serverTimestamp()
-          });
+          // Verificar si el documento existe antes de actualizarlo
+          const callDoc = await getDoc(doc(db, 'calls', callId));
+          if (callDoc.exists()) {
+            await updateDoc(doc(db, 'calls', callId), {
+              lastHeartbeat: serverTimestamp()
+            });
+          } else {
+            // Si el documento no existe, parar el heartbeat
+            console.log('VoiceCall: Call document no longer exists, stopping heartbeat');
+            stopHeartbeat();
+          }
         } catch (error) {
-          console.error('Error sending heartbeat:', error);
+          console.warn('VoiceCall: Heartbeat failed (normal during call end):', error);
+          // No mostrar error si la llamada ya terminó
+          if (callStatus === 'connected') {
+            stopHeartbeat();
+          }
         }
       }
     }, 30000);
@@ -853,21 +1012,37 @@ const VoiceCall: React.FC<VoiceCallProps> = ({
         controls={false}
         style={{ display: 'none' }}
         onLoadedMetadata={() => {
-          console.log('VoiceCall: Remote audio metadata loaded');
+          console.log('VoiceCall: 📡 Remote audio metadata loaded');
           if (remoteAudioRef.current) {
+            remoteAudioRef.current.volume = 1.0; // Establecer volumen aquí
             remoteAudioRef.current.play().catch(e => 
-              console.error('Auto-play failed:', e)
+              console.error('Auto-play on metadata failed:', e)
             );
           }
         }}
         onCanPlay={() => {
-          console.log('VoiceCall: Remote audio can play');
+          console.log('VoiceCall: 🎵 Remote audio can play');
+          if (remoteAudioRef.current) {
+            remoteAudioRef.current.volume = 1.0; // Asegurar volumen máximo
+            remoteAudioRef.current.play().catch(e => 
+              console.error('Auto-play on canplay failed:', e)
+            );
+          }
         }}
         onPlay={() => {
-          console.log('VoiceCall: Remote audio started playing');
+          console.log('VoiceCall: ▶️ Remote audio started playing');
+          if (remoteAudioRef.current) {
+            remoteAudioRef.current.volume = 1.0; // Asegurar volumen cuando empiece a reproducir
+          }
+        }}
+        onPause={() => {
+          console.log('VoiceCall: ⏸️ Remote audio paused');
+        }}
+        onVolumeChange={() => {
+          console.log('VoiceCall: 🔊 Volume changed to:', remoteAudioRef.current?.volume);
         }}
         onError={(e) => {
-          console.error('VoiceCall: Remote audio error:', e);
+          console.error('VoiceCall: 🚨 Remote audio error:', e);
         }}
       />
       
