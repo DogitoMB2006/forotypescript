@@ -139,7 +139,8 @@ const VoiceCall = ({
 
       if (localAudioRef.current) {
         localAudioRef.current.srcObject = stream;
-        localAudioRef.current.muted = true;
+        localAudioRef.current.muted = true; // Siempre mutear el audio local para evitar feedback
+        localAudioRef.current.volume = 0; // Asegurar que no se escuche el audio local
       }
 
       console.log('VoiceCall: Setting up event handlers');
@@ -152,10 +153,28 @@ const VoiceCall = ({
         console.log('VoiceCall: Received remote track:', event.track.kind);
         const [remoteStream] = event.streams;
         
-        if (remoteAudioRef.current) {
+        if (remoteAudioRef.current && remoteStream) {
+          console.log('VoiceCall: Setting remote stream to audio element');
           remoteAudioRef.current.srcObject = remoteStream;
-          remoteAudioRef.current.volume = isSpeakerOn ? 1.0 : 0.5;
-          console.log('VoiceCall: Remote stream set to audio element');
+          remoteAudioRef.current.volume = 1.0; // Volumen máximo inicialmente
+          remoteAudioRef.current.muted = false;
+          
+          // Intentar reproducir inmediatamente
+          remoteAudioRef.current.play().then(() => {
+            console.log('VoiceCall: Remote audio started playing successfully');
+          }).catch(error => {
+            console.error('VoiceCall: Error playing remote audio:', error);
+            // Reintentar después de un momento
+            setTimeout(() => {
+              if (remoteAudioRef.current) {
+                remoteAudioRef.current.play().catch(e => 
+                  console.error('VoiceCall: Retry play failed:', e)
+                );
+              }
+            }, 1000);
+          });
+        } else {
+          console.error('VoiceCall: No remote audio ref or stream available');
         }
       };
 
@@ -177,6 +196,14 @@ const VoiceCall = ({
             setCallStatus('connected');
             startCallTimer();
             startHeartbeat();
+            
+            // Asegurar que el audio remoto esté configurado correctamente
+            if (remoteAudioRef.current) {
+              console.log('VoiceCall: Ensuring remote audio is playing');
+              remoteAudioRef.current.play().catch(e => 
+                console.log('VoiceCall: Remote audio play on connect failed:', e)
+              );
+            }
           } else if (state === 'connecting') {
             console.log('VoiceCall: Still connecting...');
           } else if (state === 'disconnected') {
@@ -633,19 +660,28 @@ const VoiceCall = ({
     if (localStreamRef.current) {
       const audioTrack = localStreamRef.current.getAudioTracks()[0];
       if (audioTrack) {
-        audioTrack.enabled = isMuted;
-        setIsMuted(!isMuted);
-        console.log('VoiceCall: Mute toggled:', !isMuted);
+        // Corregir la lógica: enabled debe ser lo opuesto de isMuted
+        audioTrack.enabled = isMuted; // Si está muteado, habilitar. Si no está muteado, deshabilitar.
+        const newMuteState = !isMuted;
+        setIsMuted(newMuteState);
+        console.log('VoiceCall: Mute toggled. New state - muted:', newMuteState, 'track enabled:', audioTrack.enabled);
+      } else {
+        console.error('VoiceCall: No audio track found for muting');
       }
+    } else {
+      console.error('VoiceCall: No local stream found for muting');
     }
   };
 
   const toggleSpeaker = () => {
-    setIsSpeakerOn(!isSpeakerOn);
-    console.log('VoiceCall: Speaker toggled:', !isSpeakerOn);
+    const newSpeakerState = !isSpeakerOn;
+    setIsSpeakerOn(newSpeakerState);
+    console.log('VoiceCall: Speaker toggled:', newSpeakerState);
     
     if (remoteAudioRef.current) {
-      remoteAudioRef.current.volume = !isSpeakerOn ? 1.0 : 0.5;
+      // Cambiar volumen basado en el estado del speaker
+      remoteAudioRef.current.volume = newSpeakerState ? 1.0 : 0.7;
+      console.log('VoiceCall: Remote audio volume set to:', remoteAudioRef.current.volume);
     }
   };
 
@@ -805,8 +841,17 @@ const VoiceCall = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-      <audio ref={localAudioRef} muted autoPlay />
-      <audio ref={remoteAudioRef} autoPlay />
+      {/* Audio local - siempre muteado para evitar feedback */}
+      <audio ref={localAudioRef} muted autoPlay playsInline />
+      
+      {/* Audio remoto - para escuchar al otro usuario */}
+      <audio 
+        ref={remoteAudioRef} 
+        autoPlay 
+        playsInline
+        controls={false}
+        style={{ display: 'none' }}
+      />
       
       <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full mx-4 text-center">
         <div className="mb-8">
