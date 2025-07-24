@@ -60,49 +60,25 @@ const VoiceCall = ({
 
   const servers = {
     iceServers: [
-      // STUN servers principales
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
       { urls: 'stun:stun.stunprotocol.org:3478' },
       { urls: 'stun:stun.services.mozilla.com' },
-      
-      // TURN servers principales
       {
-        urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443'],
+        urls: 'turn:openrelay.metered.ca:80',
         username: 'openrelayproject',
         credential: 'openrelayproject'
       },
-      
-      // TURN servers alternativos
       {
-        urls: 'turn:relay1.expressturn.com:3478',
-        username: 'ef3CYGPRL0GUPE4R4R',
-        credential: 'bR79wKjBKx0LL6m9'
-      },
-      
-      // Más TURN servers de respaldo
-      {
-        urls: ['turn:numb.viagenie.ca:3478'],
-        username: 'webrtc@live.com',
-        credential: 'muazkh'
-      },
-      
-      // TURN servers adicionales con TCP/UDP
-      {
-        urls: [
-          'turn:openrelay.metered.ca:80?transport=tcp',
-          'turn:openrelay.metered.ca:443?transport=tcp'
-        ],
+        urls: 'turn:openrelay.metered.ca:443',
         username: 'openrelayproject',
         credential: 'openrelayproject'
       }
     ],
-    iceCandidatePoolSize: 20,
+    iceCandidatePoolSize: 10,
     bundlePolicy: 'max-bundle' as RTCBundlePolicy,
     rtcpMuxPolicy: 'require' as RTCRtcpMuxPolicy,
-    iceTransportPolicy: 'all' as RTCIceTransportPolicy,
-    iceGatheringState: 'gathering'
+    iceTransportPolicy: 'all' as RTCIceTransportPolicy
   };
 
   const initializeWebRTC = async () => {
@@ -129,23 +105,17 @@ const VoiceCall = ({
       console.log('VoiceCall: Got microphone stream');
       localStreamRef.current = stream;
 
-      console.log('🎤 VoiceCall: Adding tracks to peer connection');
+      console.log('VoiceCall: Adding tracks to peer connection');
       stream.getTracks().forEach(track => {
         if (peerConnectionRef.current) {
-          console.log('🎤 Adding track:', {
-            kind: track.kind,
-            enabled: track.enabled,
-            readyState: track.readyState,
-            id: track.id
-          });
           peerConnectionRef.current.addTrack(track, stream);
+          console.log('VoiceCall: Added track:', track.kind);
         }
       });
 
       if (localAudioRef.current) {
         localAudioRef.current.srcObject = stream;
-        localAudioRef.current.muted = true; // Siempre mutear el audio local para evitar feedback
-        localAudioRef.current.volume = 0; // Asegurar que no se escuche el audio local
+        localAudioRef.current.muted = true;
       }
 
       console.log('VoiceCall: Setting up event handlers');
@@ -155,76 +125,13 @@ const VoiceCall = ({
       }
 
       peerConnectionRef.current.ontrack = (event) => {
-        console.log('🎵 VoiceCall: ontrack event fired!');
-        console.log('🎵 Event details:', {
-          streams: event.streams.length,
-          track: event.track,
-          trackKind: event.track.kind,
-          trackEnabled: event.track.enabled,
-          trackReadyState: event.track.readyState
-        });
-        
+        console.log('VoiceCall: Received remote track:', event.track.kind);
         const [remoteStream] = event.streams;
         
-        if (remoteStream) {
-          console.log('🎵 Remote stream details:', {
-            id: remoteStream.id,
-            active: remoteStream.active,
-            tracks: remoteStream.getTracks().map(t => ({
-              kind: t.kind,
-              enabled: t.enabled,
-              readyState: t.readyState
-            }))
-          });
-          
-          if (remoteAudioRef.current) {
-            console.log('🎵 Setting remote stream to audio element');
-            remoteAudioRef.current.srcObject = remoteStream;
-            remoteAudioRef.current.volume = 1.0;
-            remoteAudioRef.current.muted = false;
-            
-            // Event listeners para debugging
-            remoteAudioRef.current.onloadedmetadata = () => {
-              console.log('🎵 Remote audio metadata loaded');
-            };
-            
-            remoteAudioRef.current.oncanplay = () => {
-              console.log('🎵 Remote audio can play');
-            };
-            
-            remoteAudioRef.current.onplay = () => {
-              console.log('🎵 Remote audio started playing');
-            };
-            
-            remoteAudioRef.current.onerror = (e) => {
-              console.error('🎵 Remote audio error:', e);
-            };
-            
-            // Forzar reproducción
-            setTimeout(() => {
-              if (remoteAudioRef.current) {
-                console.log('🎵 Attempting to play remote audio...');
-                remoteAudioRef.current.play()
-                  .then(() => {
-                    console.log('🎵 ✅ Remote audio playing successfully!');
-                    console.log('🎵 Audio element state:', {
-                      paused: remoteAudioRef.current?.paused,
-                      volume: remoteAudioRef.current?.volume,
-                      muted: remoteAudioRef.current?.muted,
-                      currentTime: remoteAudioRef.current?.currentTime
-                    });
-                  })
-                  .catch(error => {
-                    console.error('🎵 ❌ Remote audio play failed:', error);
-                  });
-              }
-            }, 500);
-            
-          } else {
-            console.error('🎵 ❌ No remote audio ref available!');
-          }
-        } else {
-          console.error('🎵 ❌ No remote stream in event!');
+        if (remoteAudioRef.current) {
+          remoteAudioRef.current.srcObject = remoteStream;
+          remoteAudioRef.current.volume = isSpeakerOn ? 1.0 : 0.5;
+          console.log('VoiceCall: Remote stream set to audio element');
         }
       };
 
@@ -238,83 +145,21 @@ const VoiceCall = ({
       peerConnectionRef.current.onconnectionstatechange = () => {
         if (peerConnectionRef.current) {
           const state = peerConnectionRef.current.connectionState;
-          const iceState = peerConnectionRef.current.iceConnectionState;
-          console.log('VoiceCall: Connection state changed:', state, 'ICE state:', iceState);
+          console.log('VoiceCall: Connection state changed:', state);
           
           if (state === 'connected') {
-            console.log('🔗 VoiceCall: Peer connection established');
+            console.log('VoiceCall: Peer connection established');
             setCallStatus('connected');
             startCallTimer();
             startHeartbeat();
-            
-            // Debug completo del estado
+          } else if (state === 'disconnected' || state === 'failed') {
+            console.log('VoiceCall: Connection lost, attempting to reconnect');
             setTimeout(() => {
-              console.log('🔍 CONNECTION DEBUG SUMMARY:');
-              console.log('🔍 Local stream tracks:', localStreamRef.current?.getTracks().map(t => ({
-                kind: t.kind,
-                enabled: t.enabled,
-                readyState: t.readyState
-              })));
-              
-              console.log('🔍 Peer connection state:', {
-                connectionState: peerConnectionRef.current?.connectionState,
-                iceConnectionState: peerConnectionRef.current?.iceConnectionState,
-                signalingState: peerConnectionRef.current?.signalingState
-              });
-              
-              console.log('🔍 Remote audio element:', {
-                srcObject: remoteAudioRef.current?.srcObject,
-                volume: remoteAudioRef.current?.volume,
-                muted: remoteAudioRef.current?.muted,
-                paused: remoteAudioRef.current?.paused
-              });
-              
-              // Intentar reproducir nuevamente
-              if (remoteAudioRef.current && remoteAudioRef.current.srcObject) {
-                console.log('🔍 Forcing remote audio play on connection...');
-                remoteAudioRef.current.play().catch(e => 
-                  console.log('🔍 Force play failed:', e)
-                );
-              }
-            }, 2000);
-          } else if (state === 'connecting') {
-            console.log('VoiceCall: Still connecting...');
-          } else if (state === 'disconnected') {
-            console.log('VoiceCall: Connection temporarily lost, waiting for reconnection...');
-            // Dar más tiempo para reconectar antes de fallar
-            setTimeout(() => {
-              if (peerConnectionRef.current?.connectionState === 'disconnected') {
-                console.log('VoiceCall: Connection still disconnected after timeout');
+              if (peerConnectionRef.current?.connectionState === 'failed') {
                 endCall();
               }
-            }, 10000); // 10 segundos en lugar de 5
-          } else if (state === 'failed') {
-            console.log('VoiceCall: Connection failed permanently');
-            alert('La conexión falló. Esto puede deberse a problemas de red o firewall.');
-            endCall();
+            }, 5000);
           }
-        }
-      };
-
-      peerConnectionRef.current.oniceconnectionstatechange = () => {
-        if (peerConnectionRef.current) {
-          const iceState = peerConnectionRef.current.iceConnectionState;
-          console.log('VoiceCall: ICE connection state changed:', iceState);
-          
-          if (iceState === 'failed') {
-            console.log('VoiceCall: ICE connection failed, restarting ICE...');
-            peerConnectionRef.current.restartIce();
-          } else if (iceState === 'disconnected') {
-            console.log('VoiceCall: ICE disconnected, waiting for reconnection...');
-          } else if (iceState === 'connected' || iceState === 'completed') {
-            console.log('VoiceCall: ICE connection successful!');
-          }
-        }
-      };
-
-      peerConnectionRef.current.onicegatheringstatechange = () => {
-        if (peerConnectionRef.current) {
-          console.log('VoiceCall: ICE gathering state:', peerConnectionRef.current.iceGatheringState);
         }
       };
 
@@ -388,33 +233,11 @@ const VoiceCall = ({
     try {
       setupICECandidateListener(callDocId);
       
-      // Esperar a que se complete la recolección de ICE candidates
-      console.log('VoiceCall: Waiting for ICE gathering...');
-      await new Promise((resolve) => {
-        if (peerConnectionRef.current?.iceGatheringState === 'complete') {
-          resolve(void 0);
-          return;
-        }
-        
-        const timeout = setTimeout(() => {
-          console.log('VoiceCall: ICE gathering timeout, proceeding anyway');
-          resolve(void 0);
-        }, 5000);
-        
-        peerConnectionRef.current!.addEventListener('icegatheringstatechange', function onStateChange() {
-          if (peerConnectionRef.current?.iceGatheringState === 'complete') {
-            console.log('VoiceCall: ICE gathering completed');
-            clearTimeout(timeout);
-            peerConnectionRef.current?.removeEventListener('icegatheringstatechange', onStateChange);
-            resolve(void 0);
-          }
-        });
-      });
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       const offer = await peerConnectionRef.current.createOffer({
         offerToReceiveAudio: true,
-        offerToReceiveVideo: false,
-        iceRestart: false
+        offerToReceiveVideo: false
       });
       
       console.log('VoiceCall: Offer created');
@@ -506,27 +329,15 @@ const VoiceCall = ({
   };
 
   const startHeartbeat = () => {
-    // Limpiar heartbeat anterior si existe
-    if (heartbeatRef.current) {
-      clearInterval(heartbeatRef.current);
-    }
-    
     heartbeatRef.current = setInterval(async () => {
-      // Verificar que aún tenemos un callId y que el componente no se desmontó
-      if (callId && callStatus !== 'ended') {
+      if (callId) {
         try {
           await updateDoc(doc(db, 'calls', callId), {
             lastHeartbeat: serverTimestamp()
           });
-          console.log('VoiceCall: Heartbeat sent successfully');
         } catch (error) {
-          console.log('VoiceCall: Heartbeat failed (document may be deleted):', error);
-          // Si el documento no existe, detener el heartbeat
-          stopHeartbeat();
+          console.error('Error sending heartbeat:', error);
         }
-      } else {
-        console.log('VoiceCall: Stopping heartbeat - no callId or call ended');
-        stopHeartbeat();
       }
     }, 30000);
   };
@@ -657,27 +468,12 @@ const VoiceCall = ({
   const declineCall = async () => {
     if (!callId) return;
 
-    console.log('VoiceCall: Declining call');
-    
-    // Detener heartbeat inmediatamente
-    stopHeartbeat();
-    stopCallTimer();
-
     try {
-      // Verificar si el documento existe antes de actualizarlo
-      const callDocSnapshot = await getDoc(doc(db, 'calls', callId));
-      
-      if (callDocSnapshot.exists()) {
-        await updateDoc(doc(db, 'calls', callId), {
-          status: 'declined',
-          declinedAt: serverTimestamp()
-        });
-        console.log('VoiceCall: Call declined in database');
-      } else {
-        console.log('VoiceCall: Call document no longer exists when declining');
-      }
+      await updateDoc(doc(db, 'calls', callId), {
+        status: 'declined'
+      });
     } catch (error) {
-      console.log('VoiceCall: Error declining call (document may be deleted):', error);
+      console.error('Error declining call:', error);
     }
     
     cleanup();
@@ -686,41 +482,21 @@ const VoiceCall = ({
   };
 
   const endCall = async () => {
-    console.log('VoiceCall: Starting endCall process');
-    
-    // Detener heartbeat inmediatamente para evitar errores
-    stopHeartbeat();
-    stopCallTimer();
-    
     if (callId) {
       try {
-        // Verificar si el documento aún existe antes de actualizarlo
-        const callDocSnapshot = await getDoc(doc(db, 'calls', callId));
+        await updateDoc(doc(db, 'calls', callId), {
+          status: 'ended'
+        });
         
-        if (callDocSnapshot.exists()) {
-          await updateDoc(doc(db, 'calls', callId), {
-            status: 'ended',
-            endedAt: serverTimestamp()
-          });
-          console.log('VoiceCall: Call status updated to ended');
-          
-          // Eliminar el documento después de un delay más corto
-          setTimeout(async () => {
-            try {
-              const finalCheck = await getDoc(doc(db, 'calls', callId));
-              if (finalCheck.exists()) {
-                await deleteDoc(doc(db, 'calls', callId));
-                console.log('VoiceCall: Call document deleted');
-              }
-            } catch (error) {
-              console.log('VoiceCall: Document may have been already deleted:', error);
-            }
-          }, 2000); // Reducido de 5000 a 2000ms
-        } else {
-          console.log('VoiceCall: Call document no longer exists');
-        }
+        setTimeout(async () => {
+          try {
+            await deleteDoc(doc(db, 'calls', callId));
+          } catch (error) {
+            console.error('Error deleting call doc:', error);
+          }
+        }, 5000);
       } catch (error) {
-        console.log('VoiceCall: Error updating call status (document may be deleted):', error);
+        console.error('Error ending call:', error);
       }
     }
     
@@ -733,28 +509,19 @@ const VoiceCall = ({
     if (localStreamRef.current) {
       const audioTrack = localStreamRef.current.getAudioTracks()[0];
       if (audioTrack) {
-        // Corregir la lógica: enabled debe ser lo opuesto de isMuted
-        audioTrack.enabled = isMuted; // Si está muteado, habilitar. Si no está muteado, deshabilitar.
-        const newMuteState = !isMuted;
-        setIsMuted(newMuteState);
-        console.log('VoiceCall: Mute toggled. New state - muted:', newMuteState, 'track enabled:', audioTrack.enabled);
-      } else {
-        console.error('VoiceCall: No audio track found for muting');
+        audioTrack.enabled = isMuted;
+        setIsMuted(!isMuted);
+        console.log('VoiceCall: Mute toggled:', !isMuted);
       }
-    } else {
-      console.error('VoiceCall: No local stream found for muting');
     }
   };
 
   const toggleSpeaker = () => {
-    const newSpeakerState = !isSpeakerOn;
-    setIsSpeakerOn(newSpeakerState);
-    console.log('VoiceCall: Speaker toggled:', newSpeakerState);
+    setIsSpeakerOn(!isSpeakerOn);
+    console.log('VoiceCall: Speaker toggled:', !isSpeakerOn);
     
     if (remoteAudioRef.current) {
-      // Cambiar volumen basado en el estado del speaker
-      remoteAudioRef.current.volume = newSpeakerState ? 1.0 : 0.7;
-      console.log('VoiceCall: Remote audio volume set to:', remoteAudioRef.current.volume);
+      remoteAudioRef.current.volume = !isSpeakerOn ? 1.0 : 0.5;
     }
   };
 
@@ -818,7 +585,6 @@ const VoiceCall = ({
   const cleanup = () => {
     console.log('VoiceCall: Starting cleanup');
     
-    // Detener timers primero para evitar race conditions
     stopCallTimer();
     stopHeartbeat();
     
@@ -845,7 +611,6 @@ const VoiceCall = ({
       remoteAudioRef.current.pause();
     }
     
-    // Resetear estados
     setCallStatus('ended');
     setCallDuration(0);
     setIsMuted(false);
@@ -914,54 +679,8 @@ const VoiceCall = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50">
-      {/* Audio local - siempre muteado para evitar feedback */}
-      <audio 
-        ref={localAudioRef} 
-        muted 
-        autoPlay 
-        playsInline 
-        onLoadedMetadata={() => console.log('🎤 Local audio metadata loaded')}
-        onPlay={() => console.log('🎤 Local audio started')}
-        onError={(e) => console.error('🎤 Local audio error:', e)}
-      />
-      
-      {/* Audio remoto - para escuchar al otro usuario */}
-      <audio 
-        ref={remoteAudioRef} 
-        autoPlay 
-        playsInline
-        controls={false}
-        style={{ display: 'none' }}
-        onLoadedMetadata={() => console.log('🎵 Remote audio metadata loaded')}
-        onCanPlay={() => console.log('🎵 Remote audio can play')}
-        onPlay={() => console.log('🎵 Remote audio started playing')}
-        onPause={() => console.log('🎵 Remote audio paused')}
-        onError={(e) => console.error('🎵 Remote audio error:', e)}
-        onVolumeChange={() => console.log('🎵 Remote audio volume changed:', remoteAudioRef.current?.volume)}
-      />
-      
-      {/* Botón de debug temporal */}
-      {callStatus === 'connected' && (
-        <button
-          onClick={() => {
-            console.log('🔍 MANUAL DEBUG CHECK:');
-            console.log('🔍 Remote audio ref:', remoteAudioRef.current);
-            console.log('🔍 Remote audio srcObject:', remoteAudioRef.current?.srcObject);
-            console.log('🔍 Remote audio volume:', remoteAudioRef.current?.volume);
-            console.log('🔍 Remote audio muted:', remoteAudioRef.current?.muted);
-            console.log('🔍 Remote audio paused:', remoteAudioRef.current?.paused);
-            
-            if (remoteAudioRef.current) {
-              remoteAudioRef.current.play()
-                .then(() => console.log('🔍 Manual play successful'))
-                .catch(e => console.log('🔍 Manual play failed:', e));
-            }
-          }}
-          className="fixed top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded z-50"
-        >
-          Debug Audio
-        </button>
-      )}
+      <audio ref={localAudioRef} muted autoPlay />
+      <audio ref={remoteAudioRef} autoPlay />
       
       <div className="bg-gray-900 rounded-2xl p-8 max-w-md w-full mx-4 text-center">
         <div className="mb-8">
